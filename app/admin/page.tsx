@@ -216,16 +216,23 @@ export default function AdminPanel() {
 const handleAddVideoByUrl = async () => {
   if (!videoUrl.trim()) return
 
+  // helper: parse JSON if possible, otherwise return null
+  const tryJson = async (res: Response) => {
+    try {
+      return await res.json()
+    } catch {
+      return null
+    }
+  }
+
   setIsAdding(true)
   try {
-    const urls = videoUrl.split("\n").filter((url) => url.trim())
+    const urls = videoUrl.split("\n").map((u) => u.trim()).filter(Boolean)
     const videoIds: string[] = []
 
     for (const url of urls) {
-      const videoId = extractVideoId(url.trim())
-      if (videoId) {
-        videoIds.push(videoId)
-      }
+      const videoId = extractVideoId(url)
+      if (videoId) videoIds.push(videoId)
     }
 
     if (videoIds.length === 0) {
@@ -233,33 +240,35 @@ const handleAddVideoByUrl = async () => {
       return
     }
 
-    const response = await fetch(
+    // 1) Fetch metadata from server
+    const metaRes = await fetch(
       `/api/admin/more?videoIds=${encodeURIComponent(JSON.stringify(videoIds))}`,
     )
 
-    const responseText = await response.text()
-    const data = (() => {
-      try {
-        return JSON.parse(responseText)
-      } catch {
-        return null
-      }
-    })()
+    if (!metaRes.ok) {
+      const body = await tryJson(metaRes)
+      const fallbackText = await metaRes.text().catch(() => "")
+      const msg =
+        body?.error ||
+        body?.message ||
+        `Metadata fetch failed (${metaRes.status}). ${fallbackText ? fallbackText.slice(0, 200) : ""}`
 
-    if (!response.ok) {
-      showMessage("error", data?.error || `Failed to fetch video details (${response.status})`)
+      showMessage("error", msg)
       return
     }
 
-    if (!data?.videos?.length) {
-      showMessage("error", "Failed to fetch video details")
+    const meta = await metaRes.json()
+
+    if (!meta.videos || meta.videos.length === 0) {
+      showMessage("error", "Failed to fetch video details (no videos returned).")
       return
     }
 
-    const batchVideos = data.videos.map((video: any) => ({
+    const batchVideos = meta.videos.map((video: any) => ({
       id: video.id,
       title: video.title,
-      channelName: video.channelTitle,
+      // your API returns channelTitle; your cache normalizer supports either
+      channelName: video.channelTitle || video.channelName || "Unknown Channel",
       thumbnail: video.thumbnail,
       description: video.description,
       publishedAt: video.publishedAt,
@@ -268,46 +277,37 @@ const handleAddVideoByUrl = async () => {
       duration: video.duration,
     }))
 
-    const addResponse = await fetch("/api/admin/more", {
+    // 2) Persist to More
+    const addRes = await fetch("/api/admin/more", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ videos: batchVideos }),
     })
 
-    const addText = await addResponse.text()
-    const result = (() => {
-      try {
-        return JSON.parse(addText)
-      } catch {
-        return null
-      }
-    })()
+    if (!addRes.ok) {
+      const body = await tryJson(addRes)
+      const fallbackText = await addRes.text().catch(() => "")
+      const msg =
+        body?.error ||
+        body?.message ||
+        `Add failed (${addRes.status}). ${fallbackText ? fallbackText.slice(0, 200) : ""}`
 
-    if (!addResponse.ok) {
-      showMessage(
-        "error",
-        result?.error || result?.message || `Failed to add videos (${addResponse.status})`,
-      )
+      showMessage("error", msg)
       return
     }
 
-    const successCount = result.results?.filter((r: any) => r.success).length ?? 0
-    const failCount = result.results?.filter((r: any) => !r.success).length ?? 0
+    const result = await addRes.json()
 
-    showMessage(
-      "success",
-      `Successfully added ${successCount} video(s)${
-        failCount > 0 ? `, ${failCount} already existed` : ""
-      }`,
-    )
-
-    const expectedTotal = moreVideos.length + successCount
-    await loadMoreVideosWithRetry(expectedTotal, 4)
-
-    setVideoUrl("")
+    if (result.success) {
+      showMessage("success", result.message || "Videos added.")
+      await loadMoreVideos() // no “blob propagation” needed
+      setVideoUrl("")
+    } else {
+      showMessage("error", result.message || "Failed to add videos")
+    }
   } catch (error) {
-    console.error("[handleAddVideoByUrl] error:", error)
-    showMessage("error", "Failed to add videos. See console for details.")
+    console.error("[admin] handleAddVideoByUrl error:", error)
+    showMessage("error", error instanceof Error ? error.message : "Failed to add videos")
   } finally {
     setIsAdding(false)
   }
@@ -961,7 +961,7 @@ const handleUploadToMore = async () => {
                 Paste YouTube URLs (one per line). Supports full URLs or video IDs.
               </p>
             </section>
-            
+
             <section className="mb-12">
   <h2 className="text-xl font-semibold mb-4">Manual Upload to More</h2>
 
