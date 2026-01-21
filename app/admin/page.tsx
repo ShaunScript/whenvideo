@@ -65,6 +65,10 @@ export default function AdminPanel() {
   const [moreVideos, setMoreVideos] = useState<Video[]>([])
   const [videoUrl, setVideoUrl] = useState("")
   const [isAdding, setIsAdding] = useState(false)
+  const [moreUploadFile, setMoreUploadFile] = useState<File | null>(null)
+  const [moreUploadTitle, setMoreUploadTitle] = useState("")
+  const [moreUploadChannel, setMoreUploadChannel] = useState("")
+  const [isUploadingMore, setIsUploadingMore] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [gameHighScore, setGameHighScore] = useState<{ score: number; name: string } | null>(null)
@@ -209,99 +213,201 @@ export default function AdminPanel() {
     return 0
   }
 
-  const handleAddVideoByUrl = async () => {
-    if (!videoUrl.trim()) return
+const handleAddVideoByUrl = async () => {
+  if (!videoUrl.trim()) return
 
-    setIsAdding(true)
-    try {
-      const urls = videoUrl.split("\n").filter((url) => url.trim())
-      const videoIds: string[] = []
+  setIsAdding(true)
+  try {
+    const urls = videoUrl.split("\n").filter((url) => url.trim())
+    const videoIds: string[] = []
 
-      for (const url of urls) {
-        const videoId = extractVideoId(url.trim())
-        if (videoId) {
-          videoIds.push(videoId)
-        }
+    for (const url of urls) {
+      const videoId = extractVideoId(url.trim())
+      if (videoId) {
+        videoIds.push(videoId)
       }
-
-      if (videoIds.length === 0) {
-        showMessage("error", "No valid YouTube URLs found")
-        setIsAdding(false)
-        return
-      }
-
-      const response = await fetch(`/api/admin/more?videoIds=${encodeURIComponent(JSON.stringify(videoIds))}`)
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        if (errorData.isRateLimit) {
-          showMessage("error", "YouTube API rate limit reached. Please wait a few minutes and try again.")
-        } else {
-          showMessage("error", errorData.error || "Failed to fetch video details")
-        }
-        setIsAdding(false)
-        return
-      }
-
-      const data = await response.json()
-
-      if (!data.videos || data.videos.length === 0) {
-        showMessage("error", "Failed to fetch video details")
-        setIsAdding(false)
-        return
-      }
-
-      console.log("[v0] Sending batch request for", data.videos.length, "videos")
-      const batchVideos = data.videos.map((video: any) => ({
-        id: video.id,
-        title: video.title,
-        channelName: video.channelTitle,
-        thumbnail: video.thumbnail,
-        description: video.description,
-        publishedAt: video.publishedAt,
-        viewCount: video.viewCount,
-        commentCount: video.commentCount || 0,
-        duration: video.duration,
-      }))
-
-      const addResponse = await fetch("/api/admin/more", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ videos: batchVideos }),
-      })
-
-      if (!addResponse.ok) {
-        throw new Error("Failed to add videos")
-      }
-
-      const result = await addResponse.json()
-
-      if (result.success) {
-        const successCount = result.results.filter((r: any) => r.success).length
-        const failCount = result.results.filter((r: any) => !r.success).length
-
-        showMessage(
-          "success",
-          `Successfully added ${successCount} video(s)${failCount > 0 ? `, ${failCount} already existed` : ""}`,
-        )
-        console.log("[v0] Videos added - waiting for blob propagation before reloading")
-
-        const expectedTotal = moreVideos.length + successCount
-        await loadMoreVideosWithRetry(expectedTotal, 4)
-
-        setVideoUrl("")
-      } else {
-        showMessage("error", result.message || "Failed to add videos")
-      }
-    } catch (error) {
-      console.error("[v0] Error in handleAddVideoByUrl:", error)
-      showMessage("error", "Failed to add videos. Please check your internet connection and try again.")
-    } finally {
-      setIsAdding(false)
     }
+
+    if (videoIds.length === 0) {
+      showMessage("error", "No valid YouTube URLs found")
+      return
+    }
+
+    const response = await fetch(
+      `/api/admin/more?videoIds=${encodeURIComponent(JSON.stringify(videoIds))}`,
+    )
+
+    const responseText = await response.text()
+    const data = (() => {
+      try {
+        return JSON.parse(responseText)
+      } catch {
+        return null
+      }
+    })()
+
+    if (!response.ok) {
+      showMessage("error", data?.error || `Failed to fetch video details (${response.status})`)
+      return
+    }
+
+    if (!data?.videos?.length) {
+      showMessage("error", "Failed to fetch video details")
+      return
+    }
+
+    const batchVideos = data.videos.map((video: any) => ({
+      id: video.id,
+      title: video.title,
+      channelName: video.channelTitle,
+      thumbnail: video.thumbnail,
+      description: video.description,
+      publishedAt: video.publishedAt,
+      viewCount: video.viewCount,
+      commentCount: video.commentCount || 0,
+      duration: video.duration,
+    }))
+
+    const addResponse = await fetch("/api/admin/more", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ videos: batchVideos }),
+    })
+
+    const addText = await addResponse.text()
+    const result = (() => {
+      try {
+        return JSON.parse(addText)
+      } catch {
+        return null
+      }
+    })()
+
+    if (!addResponse.ok) {
+      showMessage(
+        "error",
+        result?.error || result?.message || `Failed to add videos (${addResponse.status})`,
+      )
+      return
+    }
+
+    const successCount = result.results?.filter((r: any) => r.success).length ?? 0
+    const failCount = result.results?.filter((r: any) => !r.success).length ?? 0
+
+    showMessage(
+      "success",
+      `Successfully added ${successCount} video(s)${
+        failCount > 0 ? `, ${failCount} already existed` : ""
+      }`,
+    )
+
+    const expectedTotal = moreVideos.length + successCount
+    await loadMoreVideosWithRetry(expectedTotal, 4)
+
+    setVideoUrl("")
+  } catch (error) {
+    console.error("[handleAddVideoByUrl] error:", error)
+    showMessage("error", "Failed to add videos. See console for details.")
+  } finally {
+    setIsAdding(false)
   }
+}
+
+/* ===========================
+   MANUAL UPLOAD → MORE
+   =========================== */
+
+const handleUploadToMore = async () => {
+  if (!moreUploadFile) return
+
+  if (!moreUploadTitle.trim() || !moreUploadChannel.trim()) {
+    showMessage("error", "Please enter a title and channel name.")
+    return
+  }
+
+  setIsUploadingMore(true)
+  try {
+    // 1) Upload file
+    const fd = new FormData()
+    fd.append("file", moreUploadFile)
+
+    const uploadRes = await fetch("/api/admin/more/upload", {
+      method: "POST",
+      body: fd,
+    })
+
+    const uploadText = await uploadRes.text()
+    const uploadData = (() => {
+      try {
+        return JSON.parse(uploadText)
+      } catch {
+        return null
+      }
+    })()
+
+    if (!uploadRes.ok || !uploadData?.success) {
+      showMessage(
+        "error",
+        uploadData?.error || `Upload failed (${uploadRes.status})`,
+      )
+      return
+    }
+
+    // 2) Add uploaded video to More
+    const now = new Date().toISOString()
+    const uploadId = `upload-${Date.now()}`
+
+    const addRes = await fetch("/api/admin/more", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        video: {
+          id: uploadId,
+          title: moreUploadTitle.trim(),
+          channelName: moreUploadChannel.trim(),
+          thumbnail: "/placeholder.svg",
+          description: "",
+          publishedAt: now,
+          viewCount: "0",
+          commentCount: 0,
+          duration: "",
+          addedAt: now,
+          source: "upload",
+          videoUrl: uploadData.url,
+        },
+      }),
+    })
+
+    const addText = await addRes.text()
+    const addData = (() => {
+      try {
+        return JSON.parse(addText)
+      } catch {
+        return null
+      }
+    })()
+
+    if (!addRes.ok) {
+      showMessage(
+        "error",
+        addData?.error || addData?.message || "Failed to save uploaded video",
+      )
+      return
+    }
+
+    showMessage("success", "Uploaded and added to More!")
+    setMoreUploadFile(null)
+    setMoreUploadTitle("")
+    setMoreUploadChannel("")
+    await loadMoreVideos()
+  } catch (err: any) {
+    console.error("[handleUploadToMore] error:", err)
+    showMessage("error", err?.message || "Upload failed")
+  } finally {
+    setIsUploadingMore(false)
+  }
+}
+
 
   const handleRemoveVideo = async (videoId: string) => {
     try {
@@ -855,6 +961,57 @@ export default function AdminPanel() {
                 Paste YouTube URLs (one per line). Supports full URLs or video IDs.
               </p>
             </section>
+            
+            <section className="mb-12">
+  <h2 className="text-xl font-semibold mb-4">Manual Upload to More</h2>
+
+  <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="space-y-2">
+        <Label className="text-white">Title</Label>
+        <Input
+          value={moreUploadTitle}
+          onChange={(e) => setMoreUploadTitle(e.target.value)}
+          className="bg-black border-zinc-700 text-white"
+          placeholder="Video title"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-white">Channel Name</Label>
+        <Input
+          value={moreUploadChannel}
+          onChange={(e) => setMoreUploadChannel(e.target.value)}
+          className="bg-black border-zinc-700 text-white"
+          placeholder="Channel / uploader name"
+        />
+      </div>
+    </div>
+
+    <div className="space-y-2">
+      <Label className="text-white">Video file</Label>
+      <Input
+        type="file"
+        accept=".mp4,.webm,.mov,.m4v"
+        className="bg-black border-zinc-700 text-white"
+        onChange={(e) => setMoreUploadFile(e.target.files?.[0] ?? null)}
+      />
+    </div>
+
+    <Button
+      onClick={handleUploadToMore}
+      disabled={!moreUploadFile || isUploadingMore}
+      className="w-full bg-red-600 hover:bg-red-700"
+    >
+      {isUploadingMore ? "Uploading..." : "Upload & Add to More"}
+    </Button>
+
+    <p className="text-xs text-gray-400">
+      Saves the file into <code>public/more-uploads</code> and adds it to More.
+    </p>
+  </div>
+</section>
+
 
             <section>
               <h2 className="text-xl font-semibold mb-4">Current More ({moreVideos.length})</h2>

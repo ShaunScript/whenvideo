@@ -15,6 +15,8 @@ function normalizeVideo(v: any) {
     // frontend expects channelName
     channelName: v.channelName ?? v.channelTitle ?? "Unknown Channel",
     channelId: v.channelId ?? "",
+    source: v.source ?? (v.videoUrl ? "upload" : "youtube"),
+    videoUrl: v.videoUrl ?? v.url ?? undefined,
   }
 }
 
