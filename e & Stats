@@ -1,0 +1,25 @@
+[35mapp/about/page.tsx[m[36m:[m[32m3[m[36m:[mimport { SiteHeader } from "@/components/site-[1;31mheader[m"
+[35mapp/actions/discord-webhook.ts[m[36m:[m[32m10[m[36m:[m      [1;31mheader[ms: {
+[35mapp/admin/page.tsx[m[36m:[m[32m269[m[36m:[m        [1;31mheader[ms: {
+[35mapp/admin/page.tsx[m[36m:[m[32m768[m[36m:[m      <[1;31mheader[m className="border-b border-zinc-800 p-4 md:p-6">
+[35mapp/admin/page.tsx[m[36m:[m[32m786[m[36m:[m      </[1;31mheader[m>
+[35mapp/api/auth/discord/callback/route.ts[m[36m:[m[32m21[m[36m:[m      [1;31mheader[ms: { "Content-Type": "application/x-www-form-urlencoded" },
+[35mapp/api/auth/discord/callback/route.ts[m[36m:[m[32m39[m[36m:[m      [1;31mheader[ms: { Authorization: `Bearer ${tokenData.access_token}` },
+[35mapp/api/twitch-live/route.ts[m[36m:[m[32m15[m[36m:[m      [1;31mheader[ms: {
+[35mapp/awards-admin/page.tsx[m[36m:[m[32m187[m[36m:[m      <[1;31mheader[m className="bg-black/90 backdrop-blur-sm border-b border-zinc-800">
+[35mapp/awards-admin/page.tsx[m[36m:[m[32m215[m[36m:[m      </[1;31mheader[m>
+[35mapp/awards-results/page.tsx[m[36m:[m[32m212[m[36m:[m      <[1;31mheader[m className="bg-black/90 backdrop-blur-sm border-b border-zinc-800">
+[35mapp/awards-results/page.tsx[m[36m:[m[32m239[m[36m:[m      </[1;31mheader[m>
+[35mapp/awards/page.tsx[m[36m:[m[32m269[m[36m:[m        <[1;31mheader[m
+[35mapp/awards/page.tsx[m[36m:[m[32m307[m[36m:[m        </[1;31mheader[m>
+[35mapp/merch/page.tsx[m[36m:[m[32m2[m[36m:[mimport { SiteHeader } from "@/components/site-[1;31mheader[m"
+[35mapp/more/more-content.tsx[m[36m:[m[32m162[m[36m:[m      <[1;31mheader[m className="border-b border-zinc-800 p-4 md:p-6">
+[35mapp/more/more-content.tsx[m[36m:[m[32m178[m[36m:[m      </[1;31mheader[m>
+[35mapp/twitch-stats/page.tsx[m[36m:[m[32m3[m[36m:[mimport { SiteHeader } from "@/components/site-[1;31mheader[m"
+[35mcomponents/site-header.tsx[m[36m:[m[32m83[m[36m:[m    <[1;31mheader[m
+[35mcomponents/site-header.tsx[m[36m:[m[32m282[m[36m:[m    </[1;31mheader[m>
+[35mlib/awards-data.ts[m[36m:[m[32m100[m[36m:[m      [1;31mheader[ms: {
+[35mlib/awards-storage.ts[m[36m:[m[32m20[m[36m:[m      [1;31mheader[ms: {
+[35mlib/more-storage.ts[m[36m:[m[32m76[m[36m:[m      [1;31mheader[ms: {
+[35mnetflix-clone.tsx[m[36m:[m[32m436[m[36m:[m      <[1;31mheader[m
+[35mnetflix-clone.tsx[m[36m:[m[32m626[m[36m:[m      </[1;31mheader[m>
