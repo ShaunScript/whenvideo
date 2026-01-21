@@ -216,7 +216,6 @@ export default function AdminPanel() {
 const handleAddVideoByUrl = async () => {
   if (!videoUrl.trim()) return
 
-  // helper: parse JSON if possible, otherwise return null
   const tryJson = async (res: Response) => {
     try {
       return await res.json()
@@ -240,34 +239,30 @@ const handleAddVideoByUrl = async () => {
       return
     }
 
-    // 1) Fetch metadata from server
+    // 1) Fetch metadata
     const metaRes = await fetch(
       `/api/admin/more?videoIds=${encodeURIComponent(JSON.stringify(videoIds))}`,
     )
 
+    const metaBody = await tryJson(metaRes)
     if (!metaRes.ok) {
-      const body = await tryJson(metaRes)
-      const fallbackText = await metaRes.text().catch(() => "")
       const msg =
-        body?.error ||
-        body?.message ||
-        `Metadata fetch failed (${metaRes.status}). ${fallbackText ? fallbackText.slice(0, 200) : ""}`
-
+        metaBody?.error ||
+        metaBody?.message ||
+        `Metadata fetch failed (${metaRes.status})`
       showMessage("error", msg)
       return
     }
 
-    const meta = await metaRes.json()
-
-    if (!meta.videos || meta.videos.length === 0) {
+    const videosArr = metaBody?.videos
+    if (!Array.isArray(videosArr) || videosArr.length === 0) {
       showMessage("error", "Failed to fetch video details (no videos returned).")
       return
     }
 
-    const batchVideos = meta.videos.map((video: any) => ({
+    const batchVideos = videosArr.map((video: any) => ({
       id: video.id,
       title: video.title,
-      // your API returns channelTitle; your cache normalizer supports either
       channelName: video.channelTitle || video.channelName || "Unknown Channel",
       thumbnail: video.thumbnail,
       description: video.description,
@@ -277,41 +272,52 @@ const handleAddVideoByUrl = async () => {
       duration: video.duration,
     }))
 
-    // 2) Persist to More
+    // 2) Persist
     const addRes = await fetch("/api/admin/more", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ videos: batchVideos }),
     })
 
-    if (!addRes.ok) {
-      const body = await tryJson(addRes)
-      const fallbackText = await addRes.text().catch(() => "")
-      const msg =
-        body?.error ||
-        body?.message ||
-        `Add failed (${addRes.status}). ${fallbackText ? fallbackText.slice(0, 200) : ""}`
+    const addBody = await tryJson(addRes)
+    console.log("[admin] /api/admin/more POST status:", addRes.status, "body:", addBody)
 
+    if (!addRes.ok) {
+      const msg =
+        addBody?.error ||
+        addBody?.message ||
+        `Add failed (${addRes.status})`
       showMessage("error", msg)
       return
     }
 
-    const result = await addRes.json()
-
-    if (result.success) {
-      showMessage("success", result.message || "Videos added.")
-      await loadMoreVideos() // no “blob propagation” needed
-      setVideoUrl("")
-    } else {
-      showMessage("error", result.message || "Failed to add videos")
+    // IMPORTANT: some APIs return 200 without {success:true}
+    const explicitlyFailed = addBody?.success === false || !!addBody?.error
+    if (explicitlyFailed) {
+      showMessage("error", addBody?.message || addBody?.error || "Failed to add video")
+      return
     }
+
+    // If we got here: treat as success
+    showMessage("success", addBody?.message || "Video(s) added to More.")
+
+    // 3) Refresh list — but don’t turn a refresh failure into an “add failed”
+    try {
+      await loadMoreVideos()
+    } catch (e) {
+      console.warn("[admin] refresh after add failed:", e)
+      // still keep the success message
+    }
+
+    setVideoUrl("")
   } catch (error) {
     console.error("[admin] handleAddVideoByUrl error:", error)
-    showMessage("error", error instanceof Error ? error.message : "Failed to add videos")
+    showMessage("error", error instanceof Error ? error.message : "Failed to add video")
   } finally {
     setIsAdding(false)
   }
 }
+
 
 /* ===========================
    MANUAL UPLOAD → MORE
