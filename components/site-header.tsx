@@ -61,19 +61,31 @@ export function SiteHeader({ showTimer = false, timerData, isCompactMode = false
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [isSearchExpanded])
 
-  const handleHomeClick = (e: React.MouseEvent) => {
-    if (window.location.pathname === "/") {
-      e.preventDefault()
-      window.scrollTo({ top: 0, behavior: "smooth" })
-    }
+const handleHomeClick = (e: React.MouseEvent) => {
+  // If already on home, smooth scroll to top instead of hard navigation
+  if (window.location.pathname === "/") {
+    e.preventDefault()
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+}
+
+const handleVideosClick = (e: React.MouseEvent) => {
+  e.preventDefault()
+
+  // If we're already on the homepage, smooth scroll to the Movies/More section
+  if (window.location.pathname === "/") {
+    // Prefer scrolling to a known anchor
+    const el = document.getElementById("movies") || document.getElementById("more")
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
+
+    // Keep your existing hook if the homepage uses it (e.g., to switch focus)
+    onVideosClick?.()
+    return
   }
 
-  const handleVideosClick = (e: React.MouseEvent) => {
-    if (window.location.pathname === "/") {
-      e.preventDefault()
-      onVideosClick?.()
-    }
-  }
+  // If we're on any other page, go to homepage and tell it what to scroll to
+  window.location.href = "/?scrollTo=movies"
+}
 
   const closeSearch = () => {
     setIsSearchExpanded(false)
@@ -87,19 +99,19 @@ export function SiteHeader({ showTimer = false, timerData, isCompactMode = false
     >
       <div className="relative flex items-center justify-between px-3 py-3 md:py-4 md:px-6 lg:px-8 xl:px-12">
         <div className="flex items-center space-x-3 md:space-x-4 lg:space-x-6">
-          <Link href="/" onClick={handleHomeClick} className="flex items-center flex-shrink-0">
+          <Link href="/" onClick={handleHomeClick} className="group flex items-center flex-shrink-0">
             <div className="relative h-8 w-20 sm:h-9 sm:w-24 lg:h-10 lg:w-28">
-              <Image src="/images/doza-logo.png" alt="DOZA" fill className="object-contain" priority />
+              <Image
+  src="/images/doza-logo.png"
+  alt="DOZA"
+  fill
+  className="object-contain transition duration-200 group-hover:brightness-75"
+  priority
+/>
+
             </div>
           </Link>
           <nav className="hidden md:flex space-x-2 xl:space-x-4 items-center text-xs xl:text-sm">
-            <Link
-              href="/"
-              onClick={handleHomeClick}
-              className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap"
-            >
-              Home
-            </Link>
             <button
               onClick={handleVideosClick}
               className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap"

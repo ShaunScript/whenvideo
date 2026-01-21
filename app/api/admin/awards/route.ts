@@ -1,39 +1,73 @@
 import { NextResponse } from "next/server"
+import { pg } from "@/lib/db"
 
-// In-memory storage for awards categories (persists during server session)
-// For production, this should use a real database
-let cachedCategories: any[] = []
+export const runtime = "nodejs"
 
+/**
+ * GET /api/admin/awards
+ * Returns all categories
+ */
 export async function GET() {
   try {
-    return NextResponse.json({ categories: cachedCategories })
+    const result = await pg.query(
+      `SELECT categories
+       FROM awards_categories
+       LIMIT 1`
+    )
+
+    return NextResponse.json({
+      categories: result.rows[0]?.categories ?? [],
+    })
   } catch (error) {
     console.error("Failed to fetch awards categories:", error)
-    return NextResponse.json({ categories: [] })
+    return NextResponse.json({ categories: [] }, { status: 500 })
   }
 }
 
+/**
+ * POST /api/admin/awards
+ * Saves categories
+ */
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const { categories } = body
 
-    if (!categories || !Array.isArray(categories)) {
+    if (!Array.isArray(categories)) {
       return NextResponse.json({ error: "Invalid categories data" }, { status: 400 })
     }
 
-    cachedCategories = categories
-    return NextResponse.json({ success: true, message: "Categories saved successfully" })
+    await pg.query(
+      `
+      INSERT INTO awards_categories (id, categories)
+      VALUES (1, $1)
+      ON CONFLICT (id)
+      DO UPDATE SET categories = EXCLUDED.categories
+      `,
+      [JSON.stringify(categories)]
+    )
+
+    return NextResponse.json({
+      success: true,
+      message: "Categories saved successfully",
+    })
   } catch (error) {
     console.error("Failed to save categories:", error)
     return NextResponse.json({ error: "Failed to save categories" }, { status: 500 })
   }
 }
 
+/**
+ * PATCH /api/admin/awards
+ * Clears all categories
+ */
 export async function PATCH() {
   try {
-    cachedCategories = []
-    return NextResponse.json({ success: true, message: "All categories cleared from storage" })
+    await pg.query(`UPDATE awards_categories SET categories = '[]' WHERE id = 1`)
+    return NextResponse.json({
+      success: true,
+      message: "All categories cleared",
+    })
   } catch (error) {
     console.error("Failed to clear categories:", error)
     return NextResponse.json({ error: "Failed to clear categories" }, { status: 500 })
