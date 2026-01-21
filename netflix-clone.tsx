@@ -3,7 +3,6 @@
 import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
 import { Play, Plus, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
@@ -13,26 +12,6 @@ import type { YouTubeVideo, YouTubeChannelData } from "@/lib/youtube-api"
 import { TwitchLiveIndicator } from "@/components/twitch-live-indicator"
 import { getMoreVideos } from "@/lib/more-storage"
 import { LoadingSpinner } from "@/components/loading-spinner"
-
-export default function Home() {
-  const router = useRouter() // ✅ ADD
-  const searchParams = useSearchParams() // ✅ ADD
-
-  // ...your existing state...
-
-  React.useEffect(() => {
-    // ✅ Allow /awards (or any page) -> /?scrollTo=movies to smoothly scroll on load
-    const scrollTo = searchParams.get("scrollTo")
-    if (scrollTo === "movies") {
-      requestAnimationFrame(() => {
-        document.getElementById("movies")?.scrollIntoView({ behavior: "smooth" })
-      })
-
-      // ✅ remove the param so refresh doesn't keep scrolling
-      router.replace("/", { scroll: false })
-    }
-  }, [searchParams, router])
-
 
 function renderStars(rating: number) {
   const stars = []
@@ -1251,4 +1230,4 @@ function YouTubeVideoCard({
       </div>
     </div>
   )
-}}
+}
