@@ -342,6 +342,22 @@ export default function Home() {
   }, [])
 
   React.useEffect(() => {
+  if (typeof window === "undefined") return
+  if (window.location.hash !== "#movies") return
+
+  const scroll = () => {
+    const el = document.getElementById("movies")
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  }
+
+  scroll()
+  const t = setTimeout(scroll, 200)
+  return () => clearTimeout(t)
+}, [isLoading])
+
+  React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement
       if (isSearchExpanded && !target.closest(".search-container")) {
@@ -437,12 +453,13 @@ export default function Home() {
               >
                 Home
               </Link>
-              <button
-                onClick={scrollToVideos}
-                className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap"
-              >
-                Videos
-              </button>
+<Link
+  href="/#movies"
+  className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap"
+>
+  Videos
+</Link>
+
               <Link href="/merch" className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap">
                 Merch
               </Link>
@@ -850,7 +867,13 @@ export default function Home() {
 
 <main className="relative -mt-16 md:-mt-8 lg:-mt-32 pb-16 sm:pb-24 md:pb-32">
   {/* Movies category */}
-  <section ref={videosSectionRef} className="mb-6 sm:mb-8 px-3 sm:px-4 md:px-8 lg:px-16 pt-6 md:pt-0">
+  <section
+  id="movies"
+  ref={videosSectionRef}
+  className="mb-6 sm:mb-8 px-3 sm:px-4 md:px-8 lg:px-16 pt-6 md:pt-0"
+  style={{ scrollMarginTop: 96 }}
+>
+
     <h2 className="font-sans font-bold text-xl sm:text-2xl pl-1 sm:pl-2">
       Movies
     </h2>
