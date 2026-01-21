@@ -755,7 +755,7 @@ export default function Home() {
                 {/* Content below image - inside card */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 pb-5 md:p-6 md:pb-8">
                   {/* Added md:text-2xl to text size on tablet */}
-                  <h1 className="text-xl md:text-2xl font-bold mb-2.5 leading-tight text-white drop-shadow-lg">
+                  <h1 className="font-sans font-extrabold tracking-tight leading-[0.95] text-white drop-shadow-[0_6px_24px_rgba(0,0,0,0.65)]">
                     {featuredVideo.title}
                   </h1>
                   {/* Added md:text-base to text size on tablet */}
@@ -802,9 +802,10 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 md:mb-4 leading-tight">
-                      {featuredVideo.title}
-                    </h1>
+<h1 className="font-sans font-extrabold tracking-tight leading-[0.95] text-white drop-shadow-[0_6px_24px_rgba(0,0,0,0.65)] text-4xl sm:text-5xl md:text-6xl lg:text-7xl">
+  {featuredVideo.title}
+</h1>
+
                     <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-4 md:mb-6 text-gray-300">
                       Really cool and awesome video, you should watch it, even if you already watched it, yes
                     </p>
@@ -847,57 +848,55 @@ export default function Home() {
         )}
       </section>
 
-      <main className="relative -mt-16 md:-mt-8 lg:-mt-32 pb-16 sm:pb-24 md:pb-32">
-        {/* Movies category with "Coming Soon" placeholder if empty */}
-        <section ref={videosSectionRef} className="mb-6 sm:mb-8 px-3 sm:px-4 md:px-8 lg:px-16 pt-6 md:pt-0">
-          <h2 className="text-lg sm:text-xl md:text-2xl font-semibold mb-3 sm:mb-4 px-1 sm:px-2">Movies</h2>
-          {youtubeData && longVideos && longVideos.length > 0 ? (
-            <VideoCarousel
-              videos={longVideos}
-              onPlay={openVideoModal}
-              hoveredId={hoveredId}
-              setHoveredId={setHoveredId}
-            />
-          ) : (
-            <div className="text-gray-400 text-base sm:text-lg px-2 py-6 sm:py-8">Coming Soon</div>
-          )}
-        </section>
+<main className="relative -mt-16 md:-mt-8 lg:-mt-32 pb-16 sm:pb-24 md:pb-32">
+  {/* Movies category */}
+  <section ref={videosSectionRef} className="mb-6 sm:mb-8 px-3 sm:px-4 md:px-8 lg:px-16 pt-6 md:pt-0">
+    <h2 className="font-sans font-bold text-xl sm:text-2xl pl-1 sm:pl-2">
+      Movies
+    </h2>
+    {youtubeData && longVideos && longVideos.length > 0 ? (
+      <VideoCarousel videos={longVideos} onPlay={openVideoModal} hoveredId={hoveredId} setHoveredId={setHoveredId} />
+    ) : (
+      <div className="text-gray-400 text-base sm:text-lg px-2 py-6 sm:py-8">Coming Soon</div>
+    )}
+  </section>
 
-        {/* TV Shows category with "Coming Soon" placeholder if empty */}
-        <section className="mb-6 sm:mb-8 px-3 sm:px-4 md:px-8 lg:px-16">
-          <h2 className="text-lg sm:text-xl md:text-2xl font-semibold mb-3 sm:mb-4 px-1 sm:px-2">TV Shows</h2>
-          {youtubeData && tvVideos && tvVideos.length > 0 ? (
-            <VideoCarousel
-              videos={tvVideos}
-              onPlay={openVideoModal}
-              hoveredId={hoveredId}
-              setHoveredId={setHoveredId}
-            />
-          ) : (
-            <div className="text-gray-400 text-base sm:text-lg px-2 py-6 sm:py-8">Coming Soon</div>
-          )}
-        </section>
+  {/* TV Shows category */}
+  <section className="mb-6 sm:mb-8 px-3 sm:px-4 md:px-8 lg:px-16">
+    <h2 className="font-sans font-bold text-xl sm:text-2xl pl-1 sm:pl-2">
+      TV Shows
+    </h2>
+    {youtubeData && tvVideos && tvVideos.length > 0 ? (
+      <VideoCarousel videos={tvVideos} onPlay={openVideoModal} hoveredId={hoveredId} setHoveredId={setHoveredId} />
+    ) : (
+      <div className="text-gray-400 text-base sm:text-lg px-2 py-6 sm:py-8">Coming Soon</div>
+    )}
+  </section>
 
-        {/* More category as a button to open full page */}
-        <section className="mb-6 sm:mb-8 px-3 sm:px-4 md:px-8 lg:px-16">
-          <div className="flex items-center justify-between mb-3 sm:mb-4 px-1 sm:px-2">
-            <a href="/more" className="text-lg sm:text-xl md:text-2xl font-semibold hover:underline transition-all">
-              More
-            </a>
-          </div>
-          {youtubeData && randomizedMoreVideos && randomizedMoreVideos.length > 0 ? (
-            <VideoCarousel
-              videos={randomizedMoreVideos}
-              onPlay={openVideoModal}
-              hoveredId={hoveredId}
-              setHoveredId={setHoveredId}
-              showViewAll={moreVideos && moreVideos.length > 16}
-              showNewBadge={true}
-            />
-          ) : (
-            <div className="text-gray-400 text-base sm:text-lg px-2 py-6 sm:py-8">Coming Soon</div>
-          )}
-        </section>
+  {/* More category */}
+  <section className="mb-6 sm:mb-8 px-3 sm:px-4 md:px-8 lg:px-16">
+<h2 className="font-sans font-bold text-xl sm:text-2xl mb-3 sm:mb-4 pl-1 sm:pl-2">
+  <a href="/more" className="inline-block">
+    More
+  </a>
+</h2>
+
+    {youtubeData && randomizedMoreVideos && randomizedMoreVideos.length > 0 ? (
+      <VideoCarousel
+        videos={randomizedMoreVideos}
+        onPlay={openVideoModal}
+        hoveredId={hoveredId}
+        setHoveredId={setHoveredId}
+        showViewAll={moreVideos && moreVideos.length > 16}
+        showNewBadge={true}
+      />
+    ) : (
+<div className="text-gray-400 text-base sm:text-lg py-6 sm:py-8 pl-1 sm:pl-2">
+  Coming Soon
+</div>
+
+    )}
+  </section>
       </main>
 
       <Dialog open={!!playingVideo} onOpenChange={() => setPlayingVideo(null)}>
@@ -1039,15 +1038,16 @@ function VideoCarousel({
         </button>
       )}
 
-      <div
-        ref={scrollRef}
-        onScroll={checkScroll}
-        className="flex gap-2 sm:gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth py-2 sm:py-4 pl-1 sm:pl-2"
-        style={{
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-        }}
-      >
+<div
+  ref={scrollRef}
+  onScroll={checkScroll}
+  className="flex gap-2 sm:gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth py-2 sm:py-4"
+  style={{
+    scrollbarWidth: "none",
+    msOverflowStyle: "none",
+  }}
+>
+
         {videos.map((video, index) => (
           <div
             key={video.id}
@@ -1163,9 +1163,21 @@ function YouTubeVideoCard({
         </div>
         <div className="p-2 sm:p-3 flex-1 flex flex-col">
           <div className="mb-1">
-            <h3 className="font-medium text-xs sm:text-sm truncate text-white" title={video.title}>
-              {video.title}
-            </h3>
+<h3
+  className="
+    font-sans
+    font-medium
+    text-sm
+    leading-[1.75rem]
+    tracking-normal
+    text-white
+    truncate
+  "
+  title={video.title}
+>
+  {video.title}
+</h3>
+
           </div>
           {showChannel && (
             <div className="text-[10px] sm:text-xs text-gray-400 mb-1">{video.channelTitle || "Unknown Channel"}</div>
@@ -1173,7 +1185,19 @@ function YouTubeVideoCard({
           <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-gray-400 mt-auto">
             <div className="flex items-center gap-0.5">{renderStars(video.starRating)}</div>
             <span className="hidden sm:inline">•</span>
-            <span className="whitespace-nowrap hidden sm:inline">{video.viewCount} views</span>
+            <span
+  className="
+    whitespace-nowrap
+    hidden sm:inline
+    font-sans
+    text-[10px] sm:text-xs
+    leading-none
+    [font-variant-numeric:tabular-nums_lining-nums]
+  "
+>
+  {video.viewCount} views
+</span>
+
             <span className="hidden 2xl:inline">•</span>
             <span className="whitespace-nowrap hidden 2xl:inline">
               Reviews ({formatCommentCount(video.commentCount)})

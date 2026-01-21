@@ -165,7 +165,11 @@ export default function MoreContent() {
             <Button variant="ghost" size="icon" onClick={() => router.push("/")} className="hover:bg-zinc-800">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-2xl font-bold">More</h1>
+
+            {/* ✅ Swapped font for the title to match carousel headings */}
+            <h1 className="font-display uppercase tracking-[0.15em] text-2xl md:text-3xl">
+              More
+            </h1>
           </div>
           <div className="text-gray-400">
             {filteredVideos.length} {filteredVideos.length === 1 ? "video" : "videos"}
