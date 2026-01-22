@@ -463,12 +463,16 @@ export default function Home() {
             </Link>
             <nav className="hidden lg:flex space-x-2 xl:space-x-4 items-center text-xs xl:text-sm">
              
-<Link
-  href="/#movies"
+<button
+  type="button"
   className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap"
+  onClick={() => {
+    const el = document.getElementById("movies")
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
+  }}
 >
   Videos
-</Link>
+</button>
 
               <Link href="/merch" className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap">
                 Merch

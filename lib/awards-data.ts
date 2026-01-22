@@ -77,12 +77,10 @@ export async function getCategories(): Promise<Category[]> {
     }
 
     // Initialize with empty nominees if no data exists
-    const categories = CATEGORIES_CONFIG.map((cat) => ({
+    return CATEGORIES_CONFIG.map((cat) => ({
       ...cat,
       nominees: [],
     }))
-
-    return categories
   } catch (error) {
     console.error("Failed to get categories:", error)
     // Return initialized categories on error
@@ -108,7 +106,6 @@ export async function saveCategories(categories: Category[]): Promise<void> {
   console.log("[awards] Saved categories successfully")
 }
 
-
 export function extractVideoId(url: string): string | null {
   // Extract YouTube video ID from various URL formats including Shorts and Clips
   const patterns = [
@@ -122,22 +119,16 @@ export function extractVideoId(url: string): string | null {
   // Special handling for clips
   if (url.includes("/clip/")) {
     const clipMatch = url.match(/\/clip\/(Ugkx[a-zA-Z0-9_-]+)/)
-    if (clipMatch) {
-      return clipMatch[1]
-    }
+    if (clipMatch) return clipMatch[1]
   }
 
   for (const pattern of patterns) {
     const match = url.match(pattern)
-    if (match && match[1]) {
-      return match[1]
-    }
+    if (match && match[1]) return match[1]
   }
 
   // If it's just the video ID
-  if (/^[a-zA-Z0-9_-]{11}$/.test(url)) {
-    return url
-  }
+  if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url
 
   return null
 }
@@ -172,9 +163,7 @@ export function extractVideoInfo(url: string): {
 
   // YouTube
   const youtubeId = extractVideoId(trimmedUrl)
-  if (youtubeId) {
-    return { videoId: youtubeId, videoSource: "youtube", videoUrl: trimmedUrl }
-  }
+  if (youtubeId) return { videoId: youtubeId, videoSource: "youtube", videoUrl: trimmedUrl }
 
   // Instagram
   if (trimmedUrl.includes("instagram.com") || trimmedUrl.includes("instagr.am")) {
@@ -231,9 +220,7 @@ export function extractVideoInfo(url: string): {
 
 export function getThumbnailUrl(nominee: Nominee): string | null {
   // If there's a custom thumbnail, use it
-  if (nominee.customThumbnail) {
-    return nominee.customThumbnail
-  }
+  if (nominee.customThumbnail) return nominee.customThumbnail
 
   // YouTube thumbnails
   if (!nominee.videoSource || nominee.videoSource === "youtube") {
@@ -271,19 +258,52 @@ export function setCurrentUser(user: User | null) {
   }
 }
 
-export function saveVotes(userId: string, votes: Record<string, string>) {
+// --- Server-side vote lock (prevents sign-out / sign-in voting again) ---
+
+export async function hasUserVotedServer(userId: string): Promise<boolean> {
+  const res = await fetch(`/api/awards/voted?userId=${encodeURIComponent(userId)}`, { method: "GET" })
+  if (!res.ok) return false
+  const data = await res.json().catch(() => ({}))
+  return !!data?.voted
+}
+
+export async function lockUserVoteServer(user: User): Promise<void> {
+  const res = await fetch("/api/awards/vote", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId: user.id,
+      username: user.name,
+      provider: user.provider,
+    }),
+  })
+
+  if (res.status === 409) {
+    throw new Error("You already voted.")
+  }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "")
+    throw new Error(`Vote failed (${res.status}): ${text}`)
+  }
+}
+
+export async function saveVotes(userId: string, votes: Record<string, string>) {
   if (typeof window === "undefined") return
+
+  const user = getCurrentUser()
+  if (!user) throw new Error("Not signed in")
+
+  // ✅ Server-side lock: prevents voting again after sign-out/sign-in
+  await lockUserVoteServer(user)
 
   const allVotes = getAllVotesData()
   allVotes[userId] = votes
   localStorage.setItem("awards-votes", JSON.stringify(allVotes))
 
   // Mark user as voted
-  const user = getCurrentUser()
-  if (user) {
-    user.hasVoted = true
-    setCurrentUser(user)
-  }
+  user.hasVoted = true
+  setCurrentUser(user)
 }
 
 export function getUserVotes(userId: string): Record<string, string> | null {
@@ -310,9 +330,7 @@ export function calculateResults(): Record<string, Record<string, number>> {
   // Count votes for each nominee in each category
   Object.values(allVotes).forEach((userVotes) => {
     Object.entries(userVotes).forEach(([categoryId, nomineeId]) => {
-      if (!results[categoryId]) {
-        results[categoryId] = {}
-      }
+      if (!results[categoryId]) results[categoryId] = {}
       results[categoryId][nomineeId] = (results[categoryId][nomineeId] || 0) + 1
     })
   })
