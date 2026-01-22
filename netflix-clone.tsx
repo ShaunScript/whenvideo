@@ -462,13 +462,7 @@ export default function Home() {
               </div>
             </Link>
             <nav className="hidden lg:flex space-x-2 xl:space-x-4 items-center text-xs xl:text-sm">
-              <Link
-                href="/"
-                onClick={handleHomeClick}
-                className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap"
-              >
-                Home
-              </Link>
+             
 <Link
   href="/#movies"
   className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap"
@@ -614,19 +608,6 @@ export default function Home() {
         </div>
 
         <div className="md:hidden px-3 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
-          <Link
-            href="/"
-            onClick={(e) => {
-              setActiveMobileNav("home")
-              handleHomeClick(e)
-            }}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-              activeMobileNav === "home" ? "bg-white text-black" : "bg-zinc-800/80 text-white border border-zinc-700"
-            }`}
-          >
-            Home
-          </Link>
-
           <Link
             href="/awards"
             onClick={() => setActiveMobileNav("awards")}

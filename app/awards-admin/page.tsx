@@ -97,7 +97,13 @@ export default function AwardsAdminPage() {
     })
 
     setCategories(updatedCategories)
-    await saveCategories(updatedCategories)
+try {
+  await saveCategories(updatedCategories)
+} catch (e) {
+  console.error(e)
+  alert(e instanceof Error ? e.message : "Failed to save categories")
+}
+
 
     // Reset form
     setVideoUrl("")
@@ -123,7 +129,13 @@ export default function AwardsAdminPage() {
     })
 
     setCategories(updatedCategories)
-    await saveCategories(updatedCategories)
+try {
+  await saveCategories(updatedCategories)
+} catch (e) {
+  console.error(e)
+  alert(e instanceof Error ? e.message : "Failed to save categories")
+}
+
 
     setSaveMessage("Nominee removed successfully!")
     setTimeout(() => setSaveMessage(""), 3000)

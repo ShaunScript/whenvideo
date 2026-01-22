@@ -37,15 +37,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid categories data" }, { status: 400 })
     }
 
-    await pg.query(
-      `
-      INSERT INTO awards_categories (id, categories)
-      VALUES (1, $1)
-      ON CONFLICT (id)
-      DO UPDATE SET categories = EXCLUDED.categories
-      `,
-      [JSON.stringify(categories)]
-    )
+await pg.query(
+  `
+  INSERT INTO awards_categories (id, categories)
+  VALUES (1, $1::jsonb)
+  ON CONFLICT (id)
+  DO UPDATE SET categories = EXCLUDED.categories
+  `,
+  [JSON.stringify(categories)],
+)
+
 
     return NextResponse.json({
       success: true,

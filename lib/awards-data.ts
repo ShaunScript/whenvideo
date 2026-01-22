@@ -94,20 +94,20 @@ export async function getCategories(): Promise<Category[]> {
 }
 
 export async function saveCategories(categories: Category[]): Promise<void> {
-  try {
-    await fetch("/api/admin/awards", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ categories }),
-    })
-    console.log("[v0] Saved categories to Blob storage")
-  } catch (error) {
-    console.error("Failed to save categories:", error)
-    throw error
+  const res = await fetch("/api/admin/awards", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ categories }),
+  })
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "")
+    throw new Error(`saveCategories failed (${res.status}): ${text}`)
   }
+
+  console.log("[awards] Saved categories successfully")
 }
+
 
 export function extractVideoId(url: string): string | null {
   // Extract YouTube video ID from various URL formats including Shorts and Clips
