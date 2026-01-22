@@ -1,9 +1,9 @@
 import { Pool } from "pg"
 
-const globalForPg = global as unknown as {
+const globalForPg = globalThis as unknown as {
   pgPool?: Pool
 }
-.
+
 export const pg =
   globalForPg.pgPool ??
   new Pool({

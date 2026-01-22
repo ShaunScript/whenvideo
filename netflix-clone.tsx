@@ -3,6 +3,7 @@
 import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Play, Plus, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
@@ -57,12 +58,8 @@ function renderStars(rating: number) {
 }
 
 function formatCommentCount(count: number): string {
-  if (count >= 1000000) {
-    return `${Math.round(count / 1000000)}M`
-  }
-  if (count >= 1000) {
-    return `${Math.round(count / 1000)}K`
-  }
+  if (count >= 1000000) return `${Math.round(count / 1000000)}M`
+  if (count >= 1000) return `${Math.round(count / 1000)}K`
   return `${count}`
 }
 
@@ -75,6 +72,9 @@ function extractVideoId(videoUrl: string): string | null {
 }
 
 export default function Home() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
   const [isScrolled, setIsScrolled] = React.useState(false)
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -340,6 +340,22 @@ export default function Home() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  React.useEffect(() => {
+  const scrollTo = searchParams.get("scrollTo")
+  if (scrollTo !== "movies") return
+
+  requestAnimationFrame(() => {
+    document.getElementById("movies")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    })
+  })
+
+  // remove the param so refresh doesn't’t keep scrolling
+  router.replace("/", { scroll: false })
+}, [searchParams, router])
+
 
   React.useEffect(() => {
   if (typeof window === "undefined") return
@@ -883,6 +899,7 @@ export default function Home() {
       <div className="text-gray-400 text-base sm:text-lg px-2 py-6 sm:py-8">Coming Soon</div>
     )}
   </section>
+    
 
   {/* TV Shows category */}
   <section className="mb-6 sm:mb-8 px-3 sm:px-4 md:px-8 lg:px-16">
@@ -895,7 +912,7 @@ export default function Home() {
       <div className="text-gray-400 text-base sm:text-lg px-2 py-6 sm:py-8">Coming Soon</div>
     )}
   </section>
-
+    
   {/* More category */}
   <section className="mb-6 sm:mb-8 px-3 sm:px-4 md:px-8 lg:px-16">
 <h2 className="font-sans font-bold text-xl sm:text-2xl mb-3 sm:mb-4 pl-1 sm:pl-2">
@@ -914,13 +931,12 @@ export default function Home() {
         showNewBadge={true}
       />
     ) : (
-<div className="text-gray-400 text-base sm:text-lg py-6 sm:py-8 pl-1 sm:pl-2">
-  Coming Soon
-</div>
-
+      <div className="text-gray-400 text-base sm:text-lg py-6 sm:py-8 pl-1 sm:pl-2">
+        Coming Soon
+      </div>
     )}
   </section>
-      </main>
+</main>
 
       <Dialog open={!!playingVideo} onOpenChange={() => setPlayingVideo(null)}>
         <DialogContent
