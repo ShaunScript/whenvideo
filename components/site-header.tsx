@@ -32,7 +32,7 @@ export function SiteHeader({ showTimer = false, timerData, isCompactMode = false
       if (pathname === "/") setActiveMobileNav("home")
       else if (pathname === "/merch") setActiveMobileNav("merch")
       else if (pathname === "/twitch-stats") setActiveMobileNav("stats")
-      else if (pathname === "/awards") setActiveMobileNav("awards")
+      else if (pathname === "/socials") setActiveMobileNav("socials")
     }
   }, [])
 
@@ -127,12 +127,13 @@ const handleVideosClick = (e: React.MouseEvent) => {
             >
               Case & Stats
             </Link>
-            <Link
-              href="/awards"
-              className="relative px-2 xl:px-3 py-1 rounded-full bg-gradient-to-r from-red-600/20 to-red-500/20 border border-red-500/50 text-red-400 hover:from-red-600/30 hover:to-red-500/30 hover:text-red-300 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/20 font-semibold text-xs xl:text-sm whitespace-nowrap"
-            >
-              Awards
-            </Link>
+<Link
+href="/socials"
+className="relative px-2 xl:px-3 py-1 rounded-full bg-gradient-to-r from-red-600/20 to-red-500/20 border border-red-500/50 text-red-400 hover:from-red-600/30 hover:to-red-500/30 hover:text-red-300 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/20 font-semibold text-xs xl:text-sm whitespace-nowrap"
+>
+Socials
+</Link>
+
           </nav>
         </div>
 
@@ -156,17 +157,18 @@ const handleVideosClick = (e: React.MouseEvent) => {
 
         <div className="flex items-center space-x-2 sm:space-x-3">
           {/* Awards button - visible only on mobile */}
-          <Link
-            href="/awards"
-            onClick={() => setActiveMobileNav("awards")}
-            className={`md:hidden px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
-              activeMobileNav === "awards"
-                ? "bg-red-600 text-white"
-                : "bg-red-600/20 text-red-400 border border-red-500/50"
-            }`}
-          >
-            Awards
-          </Link>
+<Link
+href="/socials"
+onClick={() => setActiveMobileNav("socials")}
+className={`md:hidden px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
+  activeMobileNav === "socials"
+    ? "bg-red-600 text-white"
+    : "bg-red-600/20 text-red-400 border border-red-500/50"
+}`}
+>
+Socials
+</Link>
+
 
           <Button
             size="icon"
