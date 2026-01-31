@@ -522,16 +522,17 @@ export default function Home() {
 
 {/* shared stroke style to match your screenshot */}
 {(() => {
-  const iconProps = {
-    className: "w-3.5 h-3.5 xl:w-4 xl:h-4",
-    viewBox: "0 0 24 24",
-    fill: "none" as const,
-    stroke: "currentColor" as const,
-    strokeWidth: 1.5,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-  }
-  const pathProps = { vectorEffect: "non-scaling-stroke" as const }
+const iconProps = {
+  className: "w-5 h-5 xl:w-5 xl:h-5", // bigger like your 2nd screenshot
+  viewBox: "0 0 24 24",
+  fill: "none" as const,
+  stroke: "currentColor" as const,
+  strokeWidth: 1.75, // close to your target look; tweak 1.5–2.0
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+}
+const pathProps = { vectorEffect: "non-scaling-stroke" as const }
+
 
   return (
     <>
@@ -543,14 +544,11 @@ export default function Home() {
         onClick={() => window.open("https://www.twitch.tv/dozaproduction", "_blank")}
         aria-label="Twitch"
       >
-        <svg {...iconProps}>
-          <path
-            {...pathProps}
-            d="M6 2h16v10l-4 4h-4l-3 3v-3H7V6L6 2z"
-          />
-          <path {...pathProps} d="M12 7v4" />
-          <path {...pathProps} d="M16 7v4" />
-        </svg>
+      <svg {...iconProps}>
+      <path {...pathProps} d="M5 3h17v10l-4 4h-5l-3 3v-3H6V7L5 3z" />
+       <path {...pathProps} d="M12 8v4" />
+      <path {...pathProps} d="M16 8v4" />
+      </svg>
       </Button>
 
       {/* Patreon */}
@@ -561,10 +559,10 @@ export default function Home() {
         onClick={() => window.open("https://www.patreon.com/dozaproduction", "_blank")}
         aria-label="Patreon"
       >
-        <svg {...iconProps}>
-          <path {...pathProps} d="M6 3v18" />
-          <path {...pathProps} d="M15 3a6 6 0 1 1 0 12a6 6 0 0 1 0-12z" />
-        </svg>
+      <svg {...iconProps}>
+        <path {...pathProps} d="M6.5 3.5v17" />
+        <path {...pathProps} d="M15.2 4a6.8 6.8 0 1 1 0 13.6A6.8 6.8 0 0 1 15.2 4z" />
+      </svg>
       </Button>
 
       {/* X */}
@@ -575,10 +573,11 @@ export default function Home() {
         onClick={() => window.open("https://x.com/havesomedoza", "_blank")}
         aria-label="X"
       >
-        <svg {...iconProps}>
-          <path {...pathProps} d="M6 6l12 12" />
-          <path {...pathProps} d="M18 6L6 18" />
-        </svg>
+      <svg {...iconProps}>
+        <path {...pathProps} d="M4 4l16 16" />
+        <path {...pathProps} d="M20 4L4 20" />
+      </svg>
+
       </Button>
 
       {/* Instagram */}
@@ -590,9 +589,9 @@ export default function Home() {
         aria-label="Instagram"
       >
         <svg {...iconProps}>
-          <rect {...pathProps} x="6" y="6" width="12" height="12" rx="3" />
-          <circle {...pathProps} cx="12" cy="12" r="3.2" />
-          <circle {...pathProps} cx="16.2" cy="7.8" r="0.6" />
+          <rect {...pathProps} x="3.5" y="3.5" width="17" height="17" rx="4" />
+          <circle {...pathProps} cx="12" cy="12" r="4" />
+           <circle {...pathProps} cx="17.2" cy="6.8" r="0.9" />
         </svg>
       </Button>
 
@@ -604,12 +603,12 @@ export default function Home() {
         onClick={() => window.open("https://www.tiktok.com/@dozaproduction", "_blank")}
         aria-label="TikTok"
       >
-        <svg {...iconProps}>
-          <path
-            {...pathProps}
-            d="M14 5c.8 2.5 2.6 4 5 4v2c-2 0-3.7-.8-5-2v6.5a4.5 4.5 0 1 1-4-4.47V13a2.5 2.5 0 1 0 2 2.45V5h2z"
-          />
-        </svg>
+      <svg {...iconProps}>
+  <path
+    {...pathProps}
+    d="M14 4.5c.9 2.8 2.9 4.5 5.5 4.5v2.2c-2.2 0-4-.8-5.5-2.1v6.7a5 5 0 1 1-4.5-5V13a2.8 2.8 0 1 0 2.2 2.7V4.5H14z"
+    />
+      </svg>
       </Button>
     </>
   )
