@@ -32,11 +32,11 @@ export function SiteHeader({ showTimer = false, timerData, isCompactMode = false
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
-      const pathname = window.location.pathname
-      if (pathname === "/") setActiveMobileNav("home")
-      else if (pathname === "/merch") setActiveMobileNav("merch")
-      else if (pathname === "/twitch-stats") setActiveMobileNav("stats")
-      else if (pathname === "/socials") setActiveMobileNav("socials")
+      const p = window.location.pathname
+      if (p === "/") setActiveMobileNav("home")
+      else if (p === "/merch") setActiveMobileNav("merch")
+      else if (p === "/twitch-stats") setActiveMobileNav("stats")
+      else if (p === "/socials") setActiveMobileNav("socials")
     }
   }, [])
 
@@ -126,7 +126,7 @@ export function SiteHeader({ showTimer = false, timerData, isCompactMode = false
               Case & Stats
             </Link>
 
-            {/* ✅ Socials nav button removed (page still accessible via /socials URL) */}
+            {/* Socials text button removed */}
           </nav>
         </div>
 
@@ -149,7 +149,7 @@ export function SiteHeader({ showTimer = false, timerData, isCompactMode = false
         )}
 
         <div className="flex items-center space-x-2 sm:space-x-3">
-          {/* ✅ Mobile Socials pill removed */}
+          {/* Mobile Socials pill removed */}
 
           <Button
             size="icon"
@@ -160,7 +160,7 @@ export function SiteHeader({ showTimer = false, timerData, isCompactMode = false
             <Search className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
 
-          {/* ✅ Restored small socials icons on desktop */}
+          {/* ✅ Social icons restored */}
           <div className="hidden md:flex items-center space-x-0.5 xl:space-x-1">
             <TwitchLiveIndicator channelName="dozaproduction" />
 
@@ -249,6 +249,7 @@ export function SiteHeader({ showTimer = false, timerData, isCompactMode = false
               >
                 <Search className="w-4 h-4 xl:w-5 xl:h-5" />
               </Button>
+
               <Input
                 ref={searchInputRef}
                 placeholder="Search"
@@ -256,6 +257,7 @@ export function SiteHeader({ showTimer = false, timerData, isCompactMode = false
                   isSearchExpanded ? "w-full opacity-100 px-2" : "w-0 opacity-0 px-0"
                 }`}
               />
+
               {isSearchExpanded && (
                 <Button
                   size="icon"

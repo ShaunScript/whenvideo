@@ -516,7 +516,7 @@ export default function Home() {
               <Search className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
 
-<div className="hidden md:flex items-center space-x-0.5 xl:space-x-1">
+<div className="flex items-center space-x-0.5 xl:space-x-1">
 <TwitchLiveIndicator channelName="dozaproduction" />
 </div>
 
