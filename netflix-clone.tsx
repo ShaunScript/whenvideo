@@ -483,12 +483,6 @@ export default function Home() {
               >
                 Case & Stats
               </Link>
-<Link
-href="/socials"
-className="relative px-2 xl:px-3 py-1 rounded-full bg-gradient-to-r from-red-600/20 to-red-500/20 border border-red-500/50 text-red-400 hover:from-red-600/30 hover:to-red-500/30 hover:text-red-300 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/20 font-semibold text-xs xl:text-sm whitespace-nowrap"
->
-Socials
-</Link>
 
             </nav>
           </div>
@@ -551,20 +545,6 @@ Socials
             </div>
           </div>
         </div>
-
-<div className="md:hidden px-3 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
-<Link
-  href="/socials"
-  onClick={() => setActiveMobileNav("socials")}
-  className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-    activeMobileNav === "socials"
-      ? "bg-red-600 text-white"
-      : "bg-red-600/20 text-red-400 border border-red-500/50"
-  }`}
->
-  Socials
-</Link>
-</div>
 
       </header>
 

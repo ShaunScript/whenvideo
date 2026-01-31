@@ -7,6 +7,7 @@ import { Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TwitchLiveIndicator } from "@/components/twitch-live-indicator"
+import { usePathname } from "next/navigation"
 
 interface SiteHeaderProps {
   showTimer?: boolean
@@ -21,6 +22,9 @@ interface SiteHeaderProps {
 }
 
 export function SiteHeader({ showTimer = false, timerData, isCompactMode = false, onVideosClick }: SiteHeaderProps) {
+  const pathname = usePathname()
+  const isSocialsPage = pathname === "/socials"
+
   const [isScrolled, setIsScrolled] = React.useState(false)
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false)
   const [activeMobileNav, setActiveMobileNav] = React.useState("home")
@@ -37,9 +41,7 @@ export function SiteHeader({ showTimer = false, timerData, isCompactMode = false
   }, [])
 
   React.useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 0)
-    }
+    const handleScroll = () => setIsScrolled(window.scrollY > 0)
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
@@ -61,35 +63,27 @@ export function SiteHeader({ showTimer = false, timerData, isCompactMode = false
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [isSearchExpanded])
 
-const handleHomeClick = (e: React.MouseEvent) => {
-  // If already on home, smooth scroll to top instead of hard navigation
-  if (window.location.pathname === "/") {
+  const handleHomeClick = (e: React.MouseEvent) => {
+    if (window.location.pathname === "/") {
+      e.preventDefault()
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    }
+  }
+
+  const handleVideosClick = (e: React.MouseEvent) => {
     e.preventDefault()
-    window.scrollTo({ top: 0, behavior: "smooth" })
-  }
-}
 
-const handleVideosClick = (e: React.MouseEvent) => {
-  e.preventDefault()
+    if (window.location.pathname === "/") {
+      const el = document.getElementById("movies") || document.getElementById("more")
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
+      onVideosClick?.()
+      return
+    }
 
-  // If we're already on the homepage, smooth scroll to the Movies/More section
-  if (window.location.pathname === "/") {
-    // Prefer scrolling to a known anchor
-    const el = document.getElementById("movies") || document.getElementById("more")
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
-
-    // Keep your existing hook if the homepage uses it (e.g., to switch focus)
-    onVideosClick?.()
-    return
+    window.location.href = "/?scrollTo=movies"
   }
 
-  // If we're on any other page, go to homepage and tell it what to scroll to
-  window.location.href = "/?scrollTo=movies"
-}
-
-  const closeSearch = () => {
-    setIsSearchExpanded(false)
-  }
+  const closeSearch = () => setIsSearchExpanded(false)
 
   return (
     <header
@@ -102,15 +96,17 @@ const handleVideosClick = (e: React.MouseEvent) => {
           <Link href="/" onClick={handleHomeClick} className="group flex items-center flex-shrink-0">
             <div className="relative h-8 w-20 sm:h-9 sm:w-24 lg:h-10 lg:w-28">
               <Image
-  src="/images/doza-logo.png"
-  alt="DOZA"
-  fill
-  className="object-contain transition duration-200 group-hover:brightness-75"
-  priority
-/>
-
+                src="/images/doza-logo.png"
+                alt="DOZA"
+                fill
+                priority
+                className={`object-contain transition duration-200 ${
+                  isSocialsPage ? "group-hover:brightness-50" : "group-hover:brightness-75"
+                }`}
+              />
             </div>
           </Link>
+
           <nav className="hidden md:flex space-x-2 xl:space-x-4 items-center text-xs xl:text-sm">
             <button
               onClick={handleVideosClick}
@@ -118,22 +114,19 @@ const handleVideosClick = (e: React.MouseEvent) => {
             >
               Videos
             </button>
+
             <Link href="/merch" className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap">
               Merch
             </Link>
+
             <Link
               href="/twitch-stats"
               className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap"
             >
               Case & Stats
             </Link>
-<Link
-href="/socials"
-className="relative px-2 xl:px-3 py-1 rounded-full bg-gradient-to-r from-red-600/20 to-red-500/20 border border-red-500/50 text-red-400 hover:from-red-600/30 hover:to-red-500/30 hover:text-red-300 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/20 font-semibold text-xs xl:text-sm whitespace-nowrap"
->
-Socials
-</Link>
 
+            {/* ✅ Socials nav button removed (page still accessible via /socials URL) */}
           </nav>
         </div>
 
@@ -156,19 +149,7 @@ Socials
         )}
 
         <div className="flex items-center space-x-2 sm:space-x-3">
-          {/* Awards button - visible only on mobile */}
-<Link
-href="/socials"
-onClick={() => setActiveMobileNav("socials")}
-className={`md:hidden px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
-  activeMobileNav === "socials"
-    ? "bg-red-600 text-white"
-    : "bg-red-600/20 text-red-400 border border-red-500/50"
-}`}
->
-Socials
-</Link>
-
+          {/* ✅ Mobile Socials pill removed */}
 
           <Button
             size="icon"
@@ -179,10 +160,80 @@ Socials
             <Search className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
 
-<div className="hidden md:flex items-center space-x-0.5 xl:space-x-1">
-<TwitchLiveIndicator channelName="dozaproduction" />
-</div>
+          {/* ✅ Restored small socials icons on desktop */}
+          <div className="hidden md:flex items-center space-x-0.5 xl:space-x-1">
+            <TwitchLiveIndicator channelName="dozaproduction" />
 
+            <Button
+              size="icon"
+              variant="ghost"
+              className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
+              onClick={() => window.open("https://www.twitch.tv/dozaproduction", "_blank")}
+              aria-label="Twitch"
+            >
+              <svg className="w-4 h-4 xl:w-4 xl:h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
+              </svg>
+            </Button>
+
+            <Button
+              size="icon"
+              variant="ghost"
+              className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
+              onClick={() => window.open("https://www.patreon.com/dozaproduction", "_blank")}
+              aria-label="Patreon"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M15.386.524c-4.764 0-8.64 3.876-8.64 8.64 0 4.75 3.876 8.613 8.64 8.613 4.75 0 8.614-3.864 8.614-8.613C24 4.4 20.136.524 15.386.524M.003 23.537h4.22V.524H.003" />
+              </svg>
+            </Button>
+
+            <Button
+              size="icon"
+              variant="ghost"
+              className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
+              onClick={() => window.open("https://x.com/havesomedoza", "_blank")}
+              aria-label="X"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+            </Button>
+
+            <Button
+              size="icon"
+              variant="ghost"
+              className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
+              onClick={() => window.open("https://www.instagram.com/doza.production", "_blank")}
+              aria-label="Instagram"
+            >
+              <svg
+                className="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+              </svg>
+            </Button>
+
+            <Button
+              size="icon"
+              variant="ghost"
+              className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
+              onClick={() => window.open("https://www.tiktok.com/@dozaproduction", "_blank")}
+              aria-label="TikTok"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.308v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+              </svg>
+            </Button>
+          </div>
 
           <div className="search-container hidden md:flex items-center">
             <div
