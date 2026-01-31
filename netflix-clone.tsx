@@ -517,13 +517,13 @@ export default function Home() {
             </Button>
 
 {/* Desktop socials (md+) */}
-<div className="hidden md:flex items-center gap-1 shrink-0">
+<div className="hidden md:flex items-center gap-1 shrink-0 text-white">
   <TwitchLiveIndicator channelName="dozaproduction" />
 
   <Button
     size="icon"
     variant="ghost"
-    className="hover:bg-white/10 h-8 w-8 text-white"
+    className="hover:bg-white/10 h-8 w-8 text-white [&_svg]:text-white [&_svg]:fill-white [&_svg]:stroke-white"
     onClick={() => window.open("https://www.twitch.tv/dozaproduction", "_blank")}
     aria-label="Twitch"
   >
@@ -535,7 +535,7 @@ export default function Home() {
   <Button
     size="icon"
     variant="ghost"
-    className="hover:bg-white/10 h-8 w-8 text-white"
+    className="hover:bg-white/10 h-8 w-8 text-white [&_svg]:text-white [&_svg]:fill-white [&_svg]:stroke-white"
     onClick={() => window.open("https://www.patreon.com/dozaproduction", "_blank")}
     aria-label="Patreon"
   >
@@ -547,7 +547,7 @@ export default function Home() {
   <Button
     size="icon"
     variant="ghost"
-    className="hover:bg-white/10 h-8 w-8 text-white"
+    className="hover:bg-white/10 h-8 w-8 text-white [&_svg]:text-white [&_svg]:fill-white [&_svg]:stroke-white"
     onClick={() => window.open("https://x.com/havesomedoza", "_blank")}
     aria-label="X"
   >
@@ -559,7 +559,7 @@ export default function Home() {
   <Button
     size="icon"
     variant="ghost"
-    className="hover:bg-white/10 h-8 w-8 text-white"
+    className="hover:bg-white/10 h-8 w-8 text-white [&_svg]:text-white [&_svg]:fill-white [&_svg]:stroke-white"
     onClick={() => window.open("https://www.instagram.com/doza.production", "_blank")}
     aria-label="Instagram"
   >
@@ -581,7 +581,7 @@ export default function Home() {
   <Button
     size="icon"
     variant="ghost"
-    className="hover:bg-white/10 h-8 w-8 text-white"
+    className="hover:bg-white/10 h-8 w-8 text-white [&_svg]:text-white [&_svg]:fill-white [&_svg]:stroke-white"
     onClick={() => window.open("https://www.tiktok.com/@dozaproduction", "_blank")}
     aria-label="TikTok"
   >
