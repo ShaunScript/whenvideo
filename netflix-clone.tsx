@@ -14,14 +14,14 @@ import { TwitchLiveIndicator } from "@/components/twitch-live-indicator"
 import { getMoreVideos } from "@/lib/more-storage"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { FaTwitch, FaXTwitter, FaInstagram, FaTiktok } from "react-icons/fa6"
-import { SiPatreon } from "@icons-pack/react-simple-icons"
+import { SiPatreon } from "react-icons/si"
 
 function renderStars(rating: number) {
   const stars = []
   const fullStars = Math.floor(rating)
   const hasHalfStar = rating % 1 >= 0.5
   const gradientId = `half-star-${rating}`
-  
+
   for (let i = 0; i < fullStars; i++) {
     stars.push(
       <svg key={`full-${i}`} className="w-3 h-3 fill-red-600" viewBox="0 0 24 24">
@@ -533,13 +533,13 @@ export default function Home() {
 </Button>
 
 <Button
-  size="icon"
-  variant="ghost"
-  className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
-  onClick={() => window.open("https://www.patreon.com/dozaproduction", "_blank")}
-  aria-label="Patreon"
+size="icon"
+variant="ghost"
+className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
+onClick={() => window.open("https://www.patreon.com/dozaproduction", "_blank")}
+aria-label="Patreon"
 >
-  <SiPatreon className={iconClass} />
+<SiPatreon className="w-[14px] h-[14px] xl:w-[15px] xl:h-[15px]" />
 </Button>
 
 <Button
