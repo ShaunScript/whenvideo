@@ -13,6 +13,7 @@ import type { YouTubeVideo, YouTubeChannelData } from "@/lib/youtube-api"
 import { TwitchLiveIndicator } from "@/components/twitch-live-indicator"
 import { getMoreVideos } from "@/lib/more-storage"
 import { LoadingSpinner } from "@/components/loading-spinner"
+import { FaTwitch, FaPatreon, FaXTwitter, FaInstagram, FaTiktok } from "react-icons/fa6"
 
 function renderStars(rating: number) {
   const stars = []
@@ -516,103 +517,58 @@ export default function Home() {
               <Search className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
 
-{/* Desktop socials (md+) */}
-<div className="hidden md:flex items-center space-x-0.5 xl:space-x-1">
-<TwitchLiveIndicator channelName="dozaproduction" />
+            <div className="hidden md:flex items-center space-x-0.5 xl:space-x-1">
+  <TwitchLiveIndicator channelName="dozaproduction" />
 
-{/* shared stroke style to match your screenshot */}
-{(() => {
-const iconProps = {
-  className: "w-5 h-5 xl:w-5 xl:h-5", // bigger like your 2nd screenshot
-  viewBox: "0 0 24 24",
-  fill: "none" as const,
-  stroke: "currentColor" as const,
-  strokeWidth: 1.75, // close to your target look; tweak 1.5–2.0
-  strokeLinecap: "round" as const,
-  strokeLinejoin: "round" as const,
-}
-const pathProps = { vectorEffect: "non-scaling-stroke" as const }
+  <Button
+    size="icon"
+    variant="ghost"
+    className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
+    onClick={() => window.open("https://www.twitch.tv/dozaproduction", "_blank")}
+    aria-label="Twitch"
+  >
+    <FaTwitch className="w-4 h-4 xl:w-5 xl:h-5" />
+  </Button>
 
+  <Button
+    size="icon"
+    variant="ghost"
+    className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
+    onClick={() => window.open("https://www.patreon.com/dozaproduction", "_blank")}
+    aria-label="Patreon"
+  >
+    <FaPatreon className="w-4 h-4 xl:w-5 xl:h-5" />
+  </Button>
 
-  return (
-    <>
-      {/* Twitch */}
-      <Button
-        size="icon"
-        variant="ghost"
-        className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
-        onClick={() => window.open("https://www.twitch.tv/dozaproduction", "_blank")}
-        aria-label="Twitch"
-      >
-      <svg {...iconProps}>
-      <path {...pathProps} d="M5 3h17v10l-4 4h-5l-3 3v-3H6V7L5 3z" />
-       <path {...pathProps} d="M12 8v4" />
-      <path {...pathProps} d="M16 8v4" />
-      </svg>
-      </Button>
+  <Button
+    size="icon"
+    variant="ghost"
+    className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
+    onClick={() => window.open("https://x.com/havesomedoza", "_blank")}
+    aria-label="X"
+  >
+    <FaXTwitter className="w-4 h-4 xl:w-5 xl:h-5" />
+  </Button>
 
-      {/* Patreon */}
-      <Button
-        size="icon"
-        variant="ghost"
-        className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
-        onClick={() => window.open("https://www.patreon.com/dozaproduction", "_blank")}
-        aria-label="Patreon"
-      >
-      <svg {...iconProps}>
-        <path {...pathProps} d="M6.5 3.5v17" />
-        <path {...pathProps} d="M15.2 4a6.8 6.8 0 1 1 0 13.6A6.8 6.8 0 0 1 15.2 4z" />
-      </svg>
-      </Button>
+  <Button
+    size="icon"
+    variant="ghost"
+    className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
+    onClick={() => window.open("https://www.instagram.com/doza.production", "_blank")}
+    aria-label="Instagram"
+  >
+    <FaInstagram className="w-4 h-4 xl:w-5 xl:h-5" />
+  </Button>
 
-      {/* X */}
-      <Button
-        size="icon"
-        variant="ghost"
-        className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
-        onClick={() => window.open("https://x.com/havesomedoza", "_blank")}
-        aria-label="X"
-      >
-      <svg {...iconProps}>
-        <path {...pathProps} d="M4 4l16 16" />
-        <path {...pathProps} d="M20 4L4 20" />
-      </svg>
-
-      </Button>
-
-      {/* Instagram */}
-      <Button
-        size="icon"
-        variant="ghost"
-        className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
-        onClick={() => window.open("https://www.instagram.com/doza.production", "_blank")}
-        aria-label="Instagram"
-      >
-        <svg {...iconProps}>
-          <rect {...pathProps} x="3.5" y="3.5" width="17" height="17" rx="4" />
-          <circle {...pathProps} cx="12" cy="12" r="4" />
-           <circle {...pathProps} cx="17.2" cy="6.8" r="0.9" />
-        </svg>
-      </Button>
-
-      {/* TikTok */}
-      <Button
-        size="icon"
-        variant="ghost"
-        className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
-        onClick={() => window.open("https://www.tiktok.com/@dozaproduction", "_blank")}
-        aria-label="TikTok"
-      >
-      <svg {...iconProps}>
-  <path
-    {...pathProps}
-    d="M14 4.5c.9 2.8 2.9 4.5 5.5 4.5v2.2c-2.2 0-4-.8-5.5-2.1v6.7a5 5 0 1 1-4.5-5V13a2.8 2.8 0 1 0 2.2 2.7V4.5H14z"
-    />
-      </svg>
-      </Button>
-    </>
-  )
-})()}
+  <Button
+    size="icon"
+    variant="ghost"
+    className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
+    onClick={() => window.open("https://www.tiktok.com/@dozaproduction", "_blank")}
+    aria-label="TikTok"
+  >
+    <FaTiktok className="w-4 h-4 xl:w-5 xl:h-5" />
+  </Button>
 </div>
 
             <div className="search-container hidden md:flex items-center">
