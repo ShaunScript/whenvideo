@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server"
 import { getVideosByIds } from "@/lib/youtube-api"
 import moreVideosJson from "@/data/more-videos.json"
-import { readMoreCache, writeMoreCache, clearMoreCache } from "@/lib/more-cache"
-
-export const runtime = "nodejs" // needed for fs persistence
+import { kvReadMoreVideos, kvWriteMoreVideos, kvClearMoreVideos } from "@/lib/more-kv"
 
 // In-memory cache for fast responses
 let cachedVideos: any[] = []
@@ -80,9 +78,9 @@ function buildChannelSummary(videos: any[]) {
 
 async function ensureLoadedFromDisk() {
   if (hasLoadedFromDisk) return
-  const disk = await readMoreCache()
-  if (disk?.videos?.length) {
-    cachedVideos = disk.videos.map(normalizeVideo)
+  const videos = await kvReadMoreVideos()
+  if (videos.length) {
+    cachedVideos = videos.map(normalizeVideo)
   }
   hasLoadedFromDisk = true
 }
@@ -123,7 +121,7 @@ export async function GET(request: Request) {
       cachedVideos = fetched.map(normalizeVideo)
 
       // Persist to disk
-      await writeMoreCache(cachedVideos)
+      await kvWriteMoreVideos(cachedVideos)
 
       return NextResponse.json({
         videos: cachedVideos,
@@ -174,7 +172,7 @@ export async function POST(request: Request) {
       }
 
       cachedVideos = [...cachedVideos, ...videosToAdd]
-      await writeMoreCache(cachedVideos)
+      await kvWriteMoreVideos(cachedVideos)
 
       const successCount = results.filter((r) => r.success).length
       const failCount = results.filter((r) => !r.success).length
@@ -196,7 +194,7 @@ export async function POST(request: Request) {
     }
 
     cachedVideos.push(normalizeVideo({ ...video, addedAt: new Date().toISOString() }))
-    await writeMoreCache(cachedVideos)
+    await kvWriteMoreVideos(cachedVideos)
 
     return NextResponse.json({ success: true, message: "Video added to More", totalVideos: cachedVideos.length })
   } catch (error) {
@@ -223,7 +221,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, message: "Video not found in More" })
     }
 
-    await writeMoreCache(cachedVideos)
+    await kvWriteMoreVideos(cachedVideos)
     return NextResponse.json({ success: true, message: "Video removed from More", totalVideos: cachedVideos.length })
   } catch (error) {
     console.error("Failed to remove video:", error)
@@ -234,6 +232,6 @@ export async function DELETE(request: Request) {
 export async function PATCH() {
   cachedVideos = []
   hasLoadedFromDisk = false
-  await clearMoreCache()
+  await kvClearMoreVideos()
   return NextResponse.json({ success: true, message: "More cache cleared (memory + disk)" })
 }
