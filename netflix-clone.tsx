@@ -14,7 +14,8 @@ import { TwitchLiveIndicator } from "@/components/twitch-live-indicator"
 import { getMoreVideos } from "@/lib/more-storage"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { FaTwitch, FaXTwitter, FaInstagram, FaTiktok } from "react-icons/fa6"
-import { SiPatreon } from "react-icons/si"
+import { FaPatreon } from "react-icons/fa"
+
 
 function renderStars(rating: number) {
   const stars = []
@@ -74,7 +75,7 @@ function extractVideoId(videoUrl: string): string | null {
 }
 
 export default function Home() {
-  const iconClass = "w-[14px] h-[14px] xl:w-[15px] xl:h-[15px]"
+  const iconClass = "w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0"
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -539,7 +540,7 @@ className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
 onClick={() => window.open("https://www.patreon.com/dozaproduction", "_blank")}
 aria-label="Patreon"
 >
-<SiPatreon className="w-[14px] h-[14px] xl:w-[15px] xl:h-[15px]" />
+<FaPatreon className={iconClass} />
 </Button>
 
 <Button
