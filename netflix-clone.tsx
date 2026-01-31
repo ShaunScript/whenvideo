@@ -506,7 +506,7 @@ export default function Home() {
             </div>
           )}
 
-          <div className="flex items-center space-x-1 sm:space-x-2">
+<div className="flex items-center gap-2 min-w-0">
             <Button
               size="icon"
               variant="ghost"
@@ -516,78 +516,79 @@ export default function Home() {
               <Search className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
 
-<div className="flex items-center space-x-0.5 xl:space-x-1">
-<TwitchLiveIndicator channelName="dozaproduction" />
+{/* Desktop socials (md+) */}
+<div className="hidden md:flex items-center gap-1 shrink-0">
+  <TwitchLiveIndicator channelName="dozaproduction" />
 
-<Button
-  size="icon"
-  variant="ghost"
-  className="hover:bg-white/10 h-8 w-8"
-  onClick={() => window.open("https://www.twitch.tv/dozaproduction", "_blank")}
-  aria-label="Twitch"
->
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
-  </svg>
-</Button>
-
-<Button
-  size="icon"
-  variant="ghost"
-  className="hover:bg-white/10 h-8 w-8"
-  onClick={() => window.open("https://www.patreon.com/dozaproduction", "_blank")}
-  aria-label="Patreon"
->
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M15.386.524c-4.764 0-8.64 3.876-8.64 8.64 0 4.75 3.876 8.613 8.64 8.613 4.75 0 8.614-3.864 8.614-8.613C24 4.4 20.136.524 15.386.524M.003 23.537h4.22V.524H.003" />
-  </svg>
-</Button>
-
-<Button
-  size="icon"
-  variant="ghost"
-  className="hover:bg-white/10 h-8 w-8"
-  onClick={() => window.open("https://x.com/havesomedoza", "_blank")}
-  aria-label="X"
->
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-  </svg>
-</Button>
-
-<Button
-  size="icon"
-  variant="ghost"
-  className="hover:bg-white/10 h-8 w-8"
-  onClick={() => window.open("https://www.instagram.com/doza.production", "_blank")}
-  aria-label="Instagram"
->
-  <svg
-    className="w-4 h-4"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
+  <Button
+    size="icon"
+    variant="ghost"
+    className="hover:bg-white/10 h-8 w-8 text-white"
+    onClick={() => window.open("https://www.twitch.tv/dozaproduction", "_blank")}
+    aria-label="Twitch"
   >
-    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-  </svg>
-</Button>
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
+    </svg>
+  </Button>
 
-<Button
-  size="icon"
-  variant="ghost"
-  className="hover:bg-white/10 h-8 w-8"
-  onClick={() => window.open("https://www.tiktok.com/@dozaproduction", "_blank")}
-  aria-label="TikTok"
->
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.308v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-  </svg>
-</Button>
+  <Button
+    size="icon"
+    variant="ghost"
+    className="hover:bg-white/10 h-8 w-8 text-white"
+    onClick={() => window.open("https://www.patreon.com/dozaproduction", "_blank")}
+    aria-label="Patreon"
+  >
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M15.386.524c-4.764 0-8.64 3.876-8.64 8.64 0 4.75 3.876 8.613 8.64 8.613 4.75 0 8.614-3.864 8.614-8.613C24 4.4 20.136.524 15.386.524M.003 23.537h4.22V.524H.003" />
+    </svg>
+  </Button>
+
+  <Button
+    size="icon"
+    variant="ghost"
+    className="hover:bg-white/10 h-8 w-8 text-white"
+    onClick={() => window.open("https://x.com/havesomedoza", "_blank")}
+    aria-label="X"
+  >
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  </Button>
+
+  <Button
+    size="icon"
+    variant="ghost"
+    className="hover:bg-white/10 h-8 w-8 text-white"
+    onClick={() => window.open("https://www.instagram.com/doza.production", "_blank")}
+    aria-label="Instagram"
+  >
+    <svg
+      className="w-4 h-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+    </svg>
+  </Button>
+
+  <Button
+    size="icon"
+    variant="ghost"
+    className="hover:bg-white/10 h-8 w-8 text-white"
+    onClick={() => window.open("https://www.tiktok.com/@dozaproduction", "_blank")}
+    aria-label="TikTok"
+  >
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.308v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1 -.1z" />
+    </svg>
+  </Button>
 </div>
 
             <div className="search-container hidden md:flex items-center">
