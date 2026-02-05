@@ -1166,21 +1166,11 @@ function YouTubeVideoCard({
         </div>
         <div className="p-2 sm:p-3 flex-1 flex flex-col">
           <div className="mb-1">
-<h3
-  className="
-    font-sans
-    font-medium
-    text-sm
-    leading-[1.75rem]
-    tracking-normal
-    text-white
-    truncate
-  "
-  title={video.title}
->
-  {video.title}
-</h3>
 
+      <h3 className="video-title text-sm leading-snug text-white truncate" title={video.title}>
+        {video.title}
+      </h3>
+      
           </div>
           {showChannel && (
             <div className="text-[10px] sm:text-xs text-gray-400 mb-1">{video.channelTitle || "Unknown Channel"}</div>

@@ -167,9 +167,10 @@ export default function MoreContent() {
             </Button>
 
             {/* ✅ Swapped font for the title to match carousel headings */}
-            <h1 className="font-display uppercase tracking-[0.15em] text-2xl md:text-3xl">
-              More
-            </h1>
+            <h1 className="font-display uppercase tracking-normal text-2xl md:text-3xl">
+  More
+</h1>
+
           </div>
           <div className="text-gray-400">
             {filteredVideos.length} {filteredVideos.length === 1 ? "video" : "videos"}
@@ -323,9 +324,9 @@ export default function MoreContent() {
                     )}
                   </div>
                   <div className="h-10 mb-1">
-                    <h3 className="font-medium line-clamp-2 text-sm" title={video.title}>
-                      {video.title}
-                    </h3>
+                  <h3 className="font-normal line-clamp-2 text-sm" title={video.title}>
+  {video.title}
+</h3>
                   </div>
                   {video.channelTitle && <p className="text-xs text-gray-400 line-clamp-1">{video.channelTitle}</p>}
                 </div>

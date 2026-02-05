@@ -77,15 +77,22 @@
   }
 
   h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
+  h2 {
     font-family: "Bebas Neue", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-weight: 700;
     letter-spacing: 0.02em;
   }
+  
+  /* Video titles & card titles should NOT look like headings */
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+  
 
   /* Remove default input border styling for search inputs */
   .search-container input {
@@ -104,6 +111,12 @@
     box-shadow: none !important;
     ring: none !important;
   }
+
+.video-title {
+  font-weight: 400;          /* thinner */
+  letter-spacing: -0.01em;   /* tighter */
+  line-height: 1.25;
+}
 }
 
 @layer utilities {
