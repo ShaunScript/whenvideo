@@ -752,7 +752,7 @@ aria-label="Patreon"
                 {/* Content below image - inside card */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 pb-5 md:p-6 md:pb-8">
                   {/* Added md:text-2xl to text size on tablet */}
-                  <h1 className="font-sans font-extrabold tracking-tight leading-[0.95] text-white drop-shadow-[0_6px_24px_rgba(0,0,0,0.65)]">
+                  <h1 className="font-sans font-medium tracking-tight leading-[0.95] text-white drop-shadow-[0_6px_24px_rgba(0,0,0,0.65)]">
                     {featuredVideo.title}
                   </h1>
                   {/* Added md:text-base to text size on tablet */}
@@ -799,7 +799,7 @@ aria-label="Patreon"
                   </>
                 ) : (
                   <>
-<h1 className="font-sans font-extrabold tracking-tight leading-[0.95] text-white drop-shadow-[0_6px_24px_rgba(0,0,0,0.65)] text-4xl sm:text-5xl md:text-6xl lg:text-7xl">
+<h1 className="font-sans font-medium tracking-tight leading-[0.95] text-white drop-shadow-[0_6px_24px_rgba(0,0,0,0.65)] text-4xl sm:text-5xl md:text-6xl lg:text-7xl">
   {featuredVideo.title}
 </h1>
 
