@@ -1,44 +1,26 @@
+// app/api/admin/more/route.ts
 import { NextResponse } from "next/server"
-import { getVideosByIds } from "@/lib/youtube-api"
 import moreVideosJson from "@/data/more-videos.json"
-import { readMoreCache, writeMoreCache, clearMoreCache } from "@/lib/more-cache"
+import { getVideosByIds } from "@/lib/youtube-api"
+import { listMoreRows, addYouTubeIds, addUploadVideo, removeMoreVideo, clearMoreVideos } from "@/lib/more-db"
 
-export const runtime = "nodejs" // needed for fs persistence
-
-// In-memory cache for fast responses
-let cachedVideos: any[] = []
-let hasLoadedFromDisk = false
-
-function normalizeVideo(v: any) {
-  return {
-    ...v,
-    // frontend expects channelName
-    channelName: v.channelName ?? v.channelTitle ?? "Unknown Channel",
-    channelId: v.channelId ?? "",
-    source: v.source ?? (v.videoUrl ? "upload" : "youtube"),
-    videoUrl: v.videoUrl ?? v.url ?? undefined,
-  }
-}
+export const runtime = "nodejs"
 
 function extractVideoId(url: string): string | null {
   try {
     const u = new URL(url)
 
-    // youtu.be/<id>
     if (u.hostname === "youtu.be") {
       const id = u.pathname.replace("/", "").trim()
       return id.length === 11 ? id : null
     }
 
-    // youtube.com/watch?v=<id>
     const v = u.searchParams.get("v")
     if (v && v.length === 11) return v
 
-    // youtube.com/shorts/<id>
     const shorts = u.pathname.match(/\/shorts\/([^/]+)/)?.[1]
     if (shorts && shorts.length === 11) return shorts
 
-    // youtube.com/embed/<id>
     const embed = u.pathname.match(/\/embed\/([^/]+)/)?.[1]
     if (embed && embed.length === 11) return embed
 
@@ -48,7 +30,7 @@ function extractVideoId(url: string): string | null {
   }
 }
 
-function getVideoIdsFromLocalJson(): string[] {
+function getBaseIdsFromLocalJson(): string[] {
   const ids: string[] = []
   const channels = ["franzj", "renyan", "Grim", "Furiousss", "zuhn", "other"]
 
@@ -62,7 +44,6 @@ function getVideoIdsFromLocalJson(): string[] {
     }
   }
 
-  // de-dupe
   return Array.from(new Set(ids))
 }
 
@@ -78,74 +59,73 @@ function buildChannelSummary(videos: any[]) {
   return Array.from(map.values()).sort((a, b) => b.count - a.count)
 }
 
-async function ensureLoadedFromDisk() {
-  if (hasLoadedFromDisk) return
-  const disk = await readMoreCache()
-  if (disk?.videos?.length) {
-    cachedVideos = disk.videos.map(normalizeVideo)
+function normalizeVideo(v: any) {
+  return {
+    ...v,
+    channelName: v.channelName ?? v.channelTitle ?? "Unknown Channel",
+    channelId: v.channelId ?? "",
+    source: v.source ?? (v.videoUrl ? "upload" : "youtube"),
+    videoUrl: v.videoUrl ?? v.url ?? undefined,
   }
-  hasLoadedFromDisk = true
 }
 
 export async function GET(request: Request) {
   try {
-    await ensureLoadedFromDisk()
-
     const { searchParams } = new URL(request.url)
     const videoIdsParam = searchParams.get("videoIds")
 
-    // If no explicit ids requested, serve the "More" page dataset
-    if (!videoIdsParam) {
-      // If memory cache exists, return it immediately
-      if (cachedVideos.length > 0) {
-        return NextResponse.json({
-          videos: cachedVideos.map(normalizeVideo),
-          channels: buildChannelSummary(cachedVideos),
-          source: "cache",
-        })
-      }
+    const apiKey = process.env.YOUTUBE_API_KEY
+    if (!apiKey) {
+      return NextResponse.json({ error: "Missing YOUTUBE_API_KEY" }, { status: 500 })
+    }
 
-      const apiKey = process.env.YOUTUBE_API_KEY
-      if (!apiKey) {
-        return NextResponse.json(
-          { error: "Missing YOUTUBE_API_KEY (check .env.local and restart pnpm dev)" },
-          { status: 500 },
-        )
-      }
-
-      const ids = getVideoIdsFromLocalJson()
-      if (ids.length === 0) {
-        return NextResponse.json({ videos: [], channels: [] })
-      }
-
-      // IMPORTANT: do NOT slice to 50; youtube-api batches internally
-      const fetched = await getVideosByIds(apiKey, ids)
-      cachedVideos = fetched.map(normalizeVideo)
-
-      // Persist to disk
-      await writeMoreCache(cachedVideos)
-
+    // 1) Metadata lookup for specific IDs (admin uses this)
+    if (videoIdsParam) {
+      const ids = JSON.parse(videoIdsParam)
+      const videos = Array.isArray(ids) && ids.length ? await getVideosByIds(apiKey, ids) : []
+      const normalized = videos.map(normalizeVideo)
       return NextResponse.json({
-        videos: cachedVideos,
-        channels: buildChannelSummary(cachedVideos),
+        videos: normalized,
+        channels: buildChannelSummary(normalized),
         source: "youtube",
       })
     }
 
-    // Otherwise, caller asked for specific IDs
-    const apiKey = process.env.YOUTUBE_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: "YouTube API key not configured" }, { status: 500 })
-    }
+    // 2) Main dataset for /more + homepage carousel
+    const baseIds = getBaseIdsFromLocalJson()
 
-    const videoIds = JSON.parse(videoIdsParam)
-    const videos = Array.isArray(videoIds) && videoIds.length > 0 ? await getVideosByIds(apiKey, videoIds) : []
-    const normalized = videos.map(normalizeVideo)
+    const rows = await listMoreRows()
+    const uploadRows = rows.filter((r) => r.source === "upload")
+    const dbYouTubeIds = rows.filter((r) => r.source === "youtube").map((r) => r.video_id)
+
+    const allYouTubeIds = Array.from(new Set([...baseIds, ...dbYouTubeIds]))
+
+    const fetched = allYouTubeIds.length ? await getVideosByIds(apiKey, allYouTubeIds) : []
+    const youtubeVideos = fetched.map((v) => normalizeVideo({ ...v, source: "youtube" }))
+
+    const uploadVideos = uploadRows.map((r) =>
+      normalizeVideo({
+        id: r.video_id,
+        title: r.title ?? "Untitled Upload",
+        channelName: r.channel_name ?? "Unknown Channel",
+        thumbnail: r.thumbnail ?? "/placeholder.svg",
+        description: r.description ?? "",
+        publishedAt: (r.published_at ?? r.added_at) as any,
+        viewCount: r.view_count ?? "0",
+        commentCount: r.comment_count ?? 0,
+        duration: r.duration ?? "",
+        source: "upload",
+        videoUrl: r.video_url ?? undefined,
+        addedAt: r.added_at,
+      }),
+    )
+
+    const merged = [...uploadVideos, ...youtubeVideos]
 
     return NextResponse.json({
-      videos: normalized,
-      channels: buildChannelSummary(normalized),
-      source: "youtube",
+      videos: merged,
+      channels: buildChannelSummary(merged),
+      source: "db+youtube",
     })
   } catch (error: any) {
     console.error("[api/admin/more] Failed:", error?.message || error)
@@ -155,85 +135,72 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await ensureLoadedFromDisk()
-
     const body = await request.json()
     const { video, videos: batchVideos } = body
 
-    if (batchVideos && Array.isArray(batchVideos)) {
-      const results: { success: boolean; videoId: string; title: string; message: string }[] = []
-      const videosToAdd: any[] = []
+    // Batch add (YouTube)
+    if (Array.isArray(batchVideos)) {
+      const ids = batchVideos.map((v: any) => v?.id).filter((x: any) => typeof x === "string")
+      const unique = Array.from(new Set(ids))
+      const { inserted } = await addYouTubeIds(unique)
 
-      for (const v of batchVideos) {
-        if (cachedVideos.some((cv: any) => cv.id === v.id)) {
-          results.push({ success: false, videoId: v.id, title: v.title, message: "Video already in More" })
-        } else {
-          videosToAdd.push(normalizeVideo({ ...v, addedAt: new Date().toISOString() }))
-          results.push({ success: true, videoId: v.id, title: v.title, message: "Video added successfully" })
-        }
-      }
-
-      cachedVideos = [...cachedVideos, ...videosToAdd]
-      await writeMoreCache(cachedVideos)
-
-      const successCount = results.filter((r) => r.success).length
-      const failCount = results.filter((r) => !r.success).length
-
+      const already = unique.length - inserted
       return NextResponse.json({
         success: true,
-        message: `Added ${successCount} video(s)${failCount > 0 ? `, ${failCount} already existed` : ""}`,
-        results,
-        totalVideos: cachedVideos.length,
+        message: `Added ${inserted} video(s)${already > 0 ? `, ${already} already existed` : ""}`,
+        totalAttempted: unique.length,
       })
     }
 
-    if (!video) {
-      return NextResponse.json({ error: "No video data provided" }, { status: 400 })
+    // Single add (upload)
+    if (video?.source === "upload") {
+      await addUploadVideo({
+        id: video.id,
+        videoUrl: video.videoUrl,
+        title: video.title,
+        channelName: video.channelName,
+        thumbnail: video.thumbnail,
+        description: video.description,
+        publishedAt: video.publishedAt,
+        viewCount: video.viewCount,
+        commentCount: video.commentCount,
+        duration: video.duration,
+      })
+
+      return NextResponse.json({ success: true, message: "Upload added to More" })
     }
 
-    if (cachedVideos.some((v: any) => v.id === video.id)) {
-      return NextResponse.json({ success: false, message: "Video already in More" })
+    // Single add (YouTube)
+    if (video?.id) {
+      const { inserted } = await addYouTubeIds([video.id])
+      if (!inserted) return NextResponse.json({ success: false, message: "Video already in More" })
+      return NextResponse.json({ success: true, message: "Video added to More" })
     }
 
-    cachedVideos.push(normalizeVideo({ ...video, addedAt: new Date().toISOString() }))
-    await writeMoreCache(cachedVideos)
-
-    return NextResponse.json({ success: true, message: "Video added to More", totalVideos: cachedVideos.length })
+    return NextResponse.json({ error: "No video data provided" }, { status: 400 })
   } catch (error) {
-    console.error("Failed to add video:", error)
+    console.error("[api/admin/more] POST error:", error)
     return NextResponse.json({ error: "Failed to add video" }, { status: 500 })
   }
 }
 
 export async function DELETE(request: Request) {
   try {
-    await ensureLoadedFromDisk()
-
     const { searchParams } = new URL(request.url)
     const videoId = searchParams.get("videoId")
+    if (!videoId) return NextResponse.json({ error: "No video ID provided" }, { status: 400 })
 
-    if (!videoId) {
-      return NextResponse.json({ error: "No video ID provided" }, { status: 400 })
-    }
+    const { removed } = await removeMoreVideo(videoId)
+    if (!removed) return NextResponse.json({ success: false, message: "Video not found in More" })
 
-    const originalLength = cachedVideos.length
-    cachedVideos = cachedVideos.filter((v: any) => v.id !== videoId)
-
-    if (cachedVideos.length === originalLength) {
-      return NextResponse.json({ success: false, message: "Video not found in More" })
-    }
-
-    await writeMoreCache(cachedVideos)
-    return NextResponse.json({ success: true, message: "Video removed from More", totalVideos: cachedVideos.length })
+    return NextResponse.json({ success: true, message: "Video removed from More" })
   } catch (error) {
-    console.error("Failed to remove video:", error)
+    console.error("[api/admin/more] DELETE error:", error)
     return NextResponse.json({ error: "Failed to remove video" }, { status: 500 })
   }
 }
 
 export async function PATCH() {
-  cachedVideos = []
-  hasLoadedFromDisk = false
-  await clearMoreCache()
-  return NextResponse.json({ success: true, message: "More cache cleared (memory + disk)" })
+  await clearMoreVideos()
+  return NextResponse.json({ success: true, message: "More cleared (database)" })
 }

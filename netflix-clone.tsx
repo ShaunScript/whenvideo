@@ -318,13 +318,15 @@ export default function Home() {
             randomized.push(video)
           }
 
-          // Prepend the newest video if it exists
           const newestVideo = sortedMoreVideos[0]
           if (newestVideo) {
-            setRandomizedMoreVideos([newestVideo, ...randomized])
+            usedVideoIds.add(newestVideo.id) // ✅ mark used
+            const deduped = randomized.filter((v) => v.id !== newestVideo.id) // ✅ extra safety
+            setRandomizedMoreVideos([newestVideo, ...deduped])
           } else {
             setRandomizedMoreVideos(randomized)
           }
+          
         }
       } catch (error) {
         console.error("Failed to load YouTube data:", error)
