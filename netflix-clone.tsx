@@ -752,9 +752,9 @@ aria-label="Patreon"
                 {/* Content below image - inside card */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 pb-5 md:p-6 md:pb-8">
                   {/* Added md:text-2xl to text size on tablet */}
-                  <h1 className="font-sans font-medium tracking-tight leading-[0.95] text-white drop-shadow-[0_6px_24px_rgba(0,0,0,0.65)]">
-                    {featuredVideo.title}
-                  </h1>
+                  <h1 className="text-xl md:text-2xl font-semibold mb-2.5 leading-tight text-white drop-shadow-lg">
+  {featuredVideo.title}
+</h1>
                   {/* Added md:text-base to text size on tablet */}
                   <p className="text-sm md:text-base text-gray-300 mb-4">
                     Really cool and awesome video, you should watch it
@@ -799,7 +799,7 @@ aria-label="Patreon"
                   </>
                 ) : (
                   <>
-<h1 className="font-sans font-medium tracking-tight leading-[0.95] text-white drop-shadow-[0_6px_24px_rgba(0,0,0,0.65)] text-4xl sm:text-5xl md:text-6xl lg:text-7xl">
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold mb-3 md:mb-4 leading-tight">
   {featuredVideo.title}
 </h1>
 
@@ -1188,18 +1188,9 @@ function YouTubeVideoCard({
           <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-gray-400 mt-auto">
             <div className="flex items-center gap-0.5">{renderStars(video.starRating)}</div>
             <span className="hidden sm:inline">•</span>
-            <span
-  className="
-    whitespace-nowrap
-    hidden sm:inline
-    font-sans
-    text-[10px] sm:text-xs
-    leading-none
-    [font-variant-numeric:tabular-nums_lining-nums]
-  "
->
-  {video.viewCount} views
-</span>
+            <span className="whitespace-nowrap hidden sm:inline">
+              {video.viewCount} views
+            </span>
 
             <span className="hidden 2xl:inline">•</span>
             <span className="whitespace-nowrap hidden 2xl:inline">
