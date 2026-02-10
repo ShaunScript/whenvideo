@@ -86,6 +86,8 @@ export default function AdminPanel() {
   const [featuredVideoId, setFeaturedVideoId] = useState("")
   const [featuredThumbUrl, setFeaturedThumbUrl] = useState("")
   const [isSavingFeatured, setIsSavingFeatured] = useState(false)
+  const [featuredThumbFile, setFeaturedThumbFile] = useState<File | null>(null)
+  const [isUploadingFeatured, setIsUploadingFeatured] = useState(false)
 
   // ===== Auth gate (kept) =====
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -253,6 +255,35 @@ export default function AdminPanel() {
       showMessage("error", "Failed to clear featured thumbnail")
     } finally {
       setIsSavingFeatured(false)
+    }
+  }
+
+  const handleUploadFeaturedThumb = async () => {
+    if (!featuredThumbFile) {
+      showMessage("error", "Choose an image file first")
+      return
+    }
+    setIsUploadingFeatured(true)
+    try {
+      const fd = new FormData()
+      fd.append("file", featuredThumbFile)
+
+      const res = await fetch("/api/admin/more/featured-thumbmail/upload", {
+        method: "POST",
+        body: fd,
+      })
+
+      const json = await res.json()
+      if (!res.ok || !json?.success) throw new Error(json?.error || "Upload failed")
+
+      const url = json.url as string
+      setFeaturedThumbUrl(url)
+      showMessage("success", "Image uploaded, URL filled below")
+    } catch (error: any) {
+      console.error("Failed to upload featured thumbnail:", error)
+      showMessage("error", error?.message || "Upload failed")
+    } finally {
+      setIsUploadingFeatured(false)
     }
   }
 
@@ -614,13 +645,34 @@ export default function AdminPanel() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-white">Thumbnail URL</Label>
+                <Label className="text-white">Thumbnail URL (auto-filled after upload or paste manually)</Label>
                 <Input
                   value={featuredThumbUrl}
                   onChange={(e) => setFeaturedThumbUrl(e.target.value)}
                   className="bg-black border-zinc-700 text-white"
                   placeholder="https://..."
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+              <div className="space-y-2">
+                <Label className="text-white">Upload Image (jpg, png, webp)</Label>
+                <Input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp"
+                  className="bg-black border-zinc-700 text-white"
+                  onChange={(e) => setFeaturedThumbFile(e.target.files?.[0] ?? null)}
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleUploadFeaturedThumb}
+                  disabled={isUploadingFeatured}
+                  className="bg-zinc-700 hover:bg-zinc-600 flex-1"
+                >
+                  {isUploadingFeatured ? "Uploading..." : "Upload & Fill URL"}
+                </Button>
               </div>
             </div>
 
@@ -636,10 +688,13 @@ export default function AdminPanel() {
             </div>
 
             {featuredOverride ? (
-              <div className="text-sm text-gray-300">
+              <div className="text-sm text-gray-300 space-y-2">
                 <p>Current override:</p>
                 <p className="text-gray-200">Video ID: {featuredOverride.videoId}</p>
                 <p className="text-gray-200 break-all">Thumbnail: {featuredOverride.thumbnailUrl}</p>
+                <div className="relative w-48 h-28 border border-zinc-800 rounded overflow-hidden">
+                  <Image src={featuredOverride.thumbnailUrl || "/placeholder.svg"} alt="Featured thumb" fill className="object-cover" />
+                </div>
               </div>
             ) : (
               <p className="text-sm text-gray-400">No override set. The featured video uses its default thumbnail.</p>

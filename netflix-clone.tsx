@@ -588,13 +588,13 @@ aria-label="Patreon"
 
             <div className="search-container hidden md:flex items-center">
               <div
-                className={`relative bg-black/50 rounded-full transition-all duration-300 border border-gray-600 ${
+                className={`relative bg-black/50 rounded-full transition-all duration-300 border border-gray-600 flex items-center overflow-hidden h-8 xl:h-10 ${
                   isSearchExpanded ? "w-36 xl:w-48" : "w-8 xl:w-10"
                 }`}
               >
                 <button
                   type="button"
-                  className="absolute left-0 top-0 h-8 w-8 xl:h-10 xl:w-10 grid place-items-center hover:bg-white/10 rounded-full transition-colors"
+                  className="h-8 w-8 xl:h-10 xl:w-10 grid place-items-center hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
                   onClick={() => setIsSearchExpanded(!isSearchExpanded)}
                   aria-label="Search"
                 >
@@ -605,7 +605,7 @@ aria-label="Patreon"
                   ref={desktopSearchInputRef}
                   placeholder="Search"
                   className={`bg-transparent text-white placeholder-gray-400 transition-all duration-300 text-sm outline-none ${
-                    isSearchExpanded ? "w-full opacity-100 pl-9 xl:pl-11 pr-3" : "w-0 opacity-0 pl-0 pr-0"
+                    isSearchExpanded ? "w-full opacity-100 px-2 pr-3" : "w-0 opacity-0 px-0"
                   }`}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
