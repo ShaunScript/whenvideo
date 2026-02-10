@@ -209,7 +209,8 @@ export default function AdminPanel() {
       const json = await res.json()
       const data = json?.data ?? null
       setFeaturedOverride(data)
-      setFeaturedThumbUrl(data?.thumbnailUrl ?? "")
+      // Don't populate the input with a long data URL; keep it empty unless user pastes something.
+      setFeaturedThumbUrl("")
     } catch (error) {
       console.error("Failed to load featured thumbnail override:", error)
     }
@@ -288,7 +289,8 @@ export default function AdminPanel() {
       }
 
       const url = json.url as string
-      setFeaturedThumbUrl(url)
+      // Keep the input clean; rely on preview below to show current image.
+      setFeaturedThumbUrl("")
       await saveFeaturedUrl(url)
       showMessage("success", "Image uploaded and applied")
     } catch (error: any) {
@@ -687,8 +689,7 @@ export default function AdminPanel() {
 
             {featuredOverride ? (
               <div className="text-sm text-gray-300 space-y-2">
-                <p>Current override:</p>
-                <p className="text-gray-200 break-all">Thumbnail: {featuredOverride.thumbnailUrl}</p>
+                <p>Current override (preview below):</p>
                 <div className="relative w-48 h-28 border border-zinc-800 rounded overflow-hidden">
                   <Image src={featuredOverride.thumbnailUrl || "/placeholder.svg"} alt="Featured thumb" fill className="object-cover" />
                 </div>
