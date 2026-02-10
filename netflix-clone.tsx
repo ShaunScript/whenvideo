@@ -219,6 +219,15 @@ export default function Home() {
         setLongVideos(result.longVideos)
         setTvVideos(result.tvVideos)
         setFeaturedVideo(result.featuredVideo)
+        try {
+          const res = await fetch("/api/admin/more/featured-thumbmail")
+          const json = await res.json()
+          const override = json?.data
+        
+          if (override?.videoId && override?.thumbnailUrl && result.featuredVideo?.id === override.videoId) {
+            setFeaturedVideo({ ...result.featuredVideo, thumbnail: override.thumbnailUrl })
+          }
+        } catch {}
         setApiError(null)
 
         const convertedMoreVideos: YouTubeVideo[] = moreVideosFromStorage.map((video) => ({
@@ -579,21 +588,24 @@ aria-label="Patreon"
 
             <div className="search-container hidden md:flex items-center">
               <div
-                className={`flex items-center bg-black/50 rounded-full transition-all duration-300 border border-gray-600 ${
+                className={`relative bg-black/50 rounded-full transition-all duration-300 border border-gray-600 ${
                   isSearchExpanded ? "w-36 xl:w-48" : "w-8 xl:w-10"
                 }`}
               >
                 <button
-                  className="h-8 w-8 xl:h-10 xl:w-10 flex-shrink-0 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
+                  type="button"
+                  className="absolute left-0 top-0 h-8 w-8 xl:h-10 xl:w-10 grid place-items-center hover:bg-white/10 rounded-full transition-colors"
                   onClick={() => setIsSearchExpanded(!isSearchExpanded)}
+                  aria-label="Search"
                 >
                   <Search className="w-3.5 h-3.5 xl:w-5 xl:h-5" />
                 </button>
+
                 <input
                   ref={desktopSearchInputRef}
                   placeholder="Search"
                   className={`bg-transparent text-white placeholder-gray-400 transition-all duration-300 text-sm outline-none ${
-                    isSearchExpanded ? "w-full opacity-100 px-2 pr-3" : "w-0 opacity-0 px-0"
+                    isSearchExpanded ? "w-full opacity-100 pl-9 xl:pl-11 pr-3" : "w-0 opacity-0 pl-0 pr-0"
                   }`}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -787,7 +799,7 @@ aria-label="Patreon"
 
             {/* Desktop content overlay - only on lg and up */}
             <div className="relative z-10 w-full px-4 py-8 sm:p-8 md:p-12 lg:p-16 hidden lg:block">
-              <div className="max-w-2xl">
+              <div className="max-w-2xl mt-16 lg:mt-24">
                 {isLoading ? (
                   <div className="text-xl md:text-2xl">Loading...</div>
                 ) : apiError ? (

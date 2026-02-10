@@ -46,32 +46,18 @@ export default function TwitchStatsPage() {
       <SiteHeader />
 
       <div className="pt-24 px-4 max-w-6xl mx-auto">
-        <h1 className="text-3xl font-semibold mb-6 tracking-tight">
-          Case Leaderboard
-        </h1>
+        <h1 className="text-3xl font-semibold mb-6 tracking-tight">Case Leaderboard</h1>
 
         {loading && (
           <div className="flex justify-center py-24">
-            <Image
-              src="/images/image.png"
-              alt="Loading"
-              width={400}
-              height={400}
-              className="opacity-70"
-            />
+            <Image src="/images/image.png" alt="Loading" width={400} height={400} className="opacity-70" />
           </div>
         )}
 
-        {error && (
-          <div className="text-red-400 text-center py-12">
-            {error}
-          </div>
-        )}
+        {error && <div className="text-red-400 text-center py-12">{error}</div>}
 
         {!loading && !error && rows.length === 0 && (
-          <div className="text-gray-400 text-center py-12">
-            No case data yet
-          </div>
+          <div className="text-gray-400 text-center py-12">No case data yet</div>
         )}
 
         {!loading && !error && rows.length > 0 && (
@@ -92,34 +78,15 @@ export default function TwitchStatsPage() {
 
               <tbody>
                 {rows.map((row, i) => (
-                  <tr
-                    key={row.userId}
-                    className="border-t border-white/5 hover:bg-white/5 transition"
-                  >
-                    <td className="px-4 py-3 text-gray-400">
-                      {i + 1}
-                    </td>
-                    <td className="px-4 py-3 font-medium">
-                      {row.userName}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold">
-                      {row.score}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {row.opens}
-                    </td>
-                    <td className="px-4 py-3 text-right text-gray-300">
-                      {row.common}
-                    </td>
-                    <td className="px-4 py-3 text-right text-blue-400">
-                      {row.rare}
-                    </td>
-                    <td className="px-4 py-3 text-right text-purple-400">
-                      {row.epic}
-                    </td>
-                    <td className="px-4 py-3 text-right text-yellow-400">
-                      {row.legendary}
-                    </td>
+                  <tr key={row.userId} className="border-t border-white/5 hover:bg-white/5 transition">
+                    <td className="px-4 py-3 text-gray-400">{i + 1}</td>
+                    <td className="px-4 py-3 font-medium">{row.userName}</td>
+                    <td className="px-4 py-3 text-right font-semibold">{row.score}</td>
+                    <td className="px-4 py-3 text-right">{row.opens}</td>
+                    <td className="px-4 py-3 text-right text-gray-300">{row.common}</td>
+                    <td className="px-4 py-3 text-right text-blue-400">{row.rare}</td>
+                    <td className="px-4 py-3 text-right text-purple-400">{row.epic}</td>
+                    <td className="px-4 py-3 text-right text-yellow-400">{row.legendary}</td>
                   </tr>
                 ))}
               </tbody>

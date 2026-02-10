@@ -81,6 +81,11 @@ export default function AdminPanel() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [gameHighScore, setGameHighScore] = useState<{ score: number; name: string } | null>(null)
+  const [newHighScoreName, setNewHighScoreName] = useState("")
+  const [featuredOverride, setFeaturedOverride] = useState<{ videoId: string; thumbnailUrl: string } | null>(null)
+  const [featuredVideoId, setFeaturedVideoId] = useState("")
+  const [featuredThumbUrl, setFeaturedThumbUrl] = useState("")
+  const [isSavingFeatured, setIsSavingFeatured] = useState(false)
 
   // ===== Auth gate (kept) =====
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -148,20 +153,106 @@ export default function AdminPanel() {
     return 0
   }
 
-  const loadGameHighScore = () => {
+  const loadGameHighScore = async () => {
     try {
-      const saved = localStorage.getItem("flappyDozaHighScore")
-      if (saved) setGameHighScore(JSON.parse(saved))
+      const res = await fetch("/api/game/highscore", { cache: "no-store" })
+      if (!res.ok) throw new Error("Failed to fetch high score")
+      const json = await res.json()
+      setGameHighScore(json?.data ?? null)
+      setNewHighScoreName(json?.data?.name ?? "")
     } catch (error) {
       console.error("Failed to load game high score:", error)
+      showMessage("error", "Could not load game high score")
     }
   }
 
-  const handleResetGameHighScore = () => {
-    if (confirm("Are you sure you want to reset the game high score?")) {
-      localStorage.removeItem("flappyDozaHighScore")
+  const handleResetGameHighScore = async () => {
+    if (!confirm("Delete the stored high score and name?")) return
+    try {
+      const res = await fetch("/api/game/highscore", { method: "DELETE" })
+      if (!res.ok) throw new Error("Delete failed")
       setGameHighScore(null)
-      showMessage("success", "Game high score reset successfully")
+      setNewHighScoreName("")
+      showMessage("success", "High score deleted")
+    } catch (error) {
+      console.error("Failed to delete high score:", error)
+      showMessage("error", "Failed to delete high score")
+    }
+  }
+
+  const handleRenameHighScore = async () => {
+    const name = newHighScoreName.trim()
+    if (!name) {
+      showMessage("error", "Enter a name first")
+      return
+    }
+    try {
+      const res = await fetch("/api/game/highscore", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      })
+      if (!res.ok) throw new Error("Rename failed")
+      await loadGameHighScore()
+      showMessage("success", "High score name updated")
+    } catch (error) {
+      console.error("Failed to rename high score:", error)
+      showMessage("error", "Failed to rename high score")
+    }
+  }
+
+  const loadFeaturedOverride = async () => {
+    try {
+      const res = await fetch("/api/admin/more/featured-thumbmail", { cache: "no-store" })
+      if (!res.ok) throw new Error("Failed to fetch featured override")
+      const json = await res.json()
+      const data = json?.data ?? null
+      setFeaturedOverride(data)
+      setFeaturedVideoId(data?.videoId ?? "")
+      setFeaturedThumbUrl(data?.thumbnailUrl ?? "")
+    } catch (error) {
+      console.error("Failed to load featured thumbnail override:", error)
+    }
+  }
+
+  const handleSaveFeaturedOverride = async () => {
+    if (!featuredVideoId.trim() || !featuredThumbUrl.trim()) {
+      showMessage("error", "Enter both a video ID and a thumbnail URL")
+      return
+    }
+    setIsSavingFeatured(true)
+    try {
+      const res = await fetch("/api/admin/more/featured-thumbmail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoId: featuredVideoId.trim(), thumbnailUrl: featuredThumbUrl.trim() }),
+      })
+      if (!res.ok) throw new Error("Save failed")
+      await loadFeaturedOverride()
+      showMessage("success", "Featured thumbnail updated")
+    } catch (error) {
+      console.error("Failed to save featured override:", error)
+      showMessage("error", "Failed to save featured thumbnail")
+    } finally {
+      setIsSavingFeatured(false)
+    }
+  }
+
+  const handleClearFeaturedOverride = async () => {
+    if (!confirm("Remove the custom featured thumbnail?")) return
+    setIsSavingFeatured(true)
+    try {
+      const res = await fetch("/api/admin/more/featured-thumbmail", { method: "DELETE" })
+      if (!res.ok) throw new Error("Delete failed")
+      setFeaturedOverride(null)
+      setFeaturedVideoId("")
+      setFeaturedThumbUrl("")
+      showMessage("success", "Featured thumbnail cleared")
+    } catch (error) {
+      console.error("Failed to clear featured override:", error)
+      showMessage("error", "Failed to clear featured thumbnail")
+    } finally {
+      setIsSavingFeatured(false)
     }
   }
 
@@ -169,6 +260,7 @@ export default function AdminPanel() {
     if (isAuthenticated) {
       loadMoreVideos()
       loadGameHighScore()
+      loadFeaturedOverride()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated])
@@ -477,19 +569,80 @@ export default function AdminPanel() {
           <h2 className="text-xl font-semibold mb-4">Game High Score</h2>
           <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
             {gameHighScore ? (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm mb-1">Current High Score</p>
-                  <p className="text-2xl font-bold">{gameHighScore.score}</p>
-                  <p className="text-gray-400 mt-1">by {gameHighScore.name}</p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-gray-400 text-sm mb-1">Current High Score</p>
+                    <p className="text-2xl font-bold">{gameHighScore.score}</p>
+                    <p className="text-gray-400 mt-1">by {gameHighScore.name}</p>
+                  </div>
+                  <Button onClick={handleResetGameHighScore} variant="destructive">
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
                 </div>
-                <Button onClick={handleResetGameHighScore} variant="destructive">
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Reset High Score
-                </Button>
+
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+                  <Input
+                    value={newHighScoreName}
+                    onChange={(e) => setNewHighScoreName(e.target.value)}
+                    placeholder="Rename high score holder"
+                    className="bg-black border-zinc-700 text-white"
+                  />
+                  <Button onClick={handleRenameHighScore} className="bg-red-600 hover:bg-red-700">
+                    Save Name
+                  </Button>
+                </div>
               </div>
             ) : (
               <p className="text-gray-400 text-center">No high score set yet</p>
+            )}
+          </div>
+        </section>
+
+        <section className="mb-12">
+          <h2 className="text-xl font-semibold mb-4">Featured Thumbnail Override</h2>
+          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-white">Featured Video ID</Label>
+                <Input
+                  value={featuredVideoId}
+                  onChange={(e) => setFeaturedVideoId(e.target.value)}
+                  className="bg-black border-zinc-700 text-white"
+                  placeholder="YouTube video ID"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white">Thumbnail URL</Label>
+                <Input
+                  value={featuredThumbUrl}
+                  onChange={(e) => setFeaturedThumbUrl(e.target.value)}
+                  className="bg-black border-zinc-700 text-white"
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={handleSaveFeaturedOverride} disabled={isSavingFeatured} className="bg-red-600 hover:bg-red-700">
+                {isSavingFeatured ? "Saving..." : "Save Override"}
+              </Button>
+              {featuredOverride && (
+                <Button onClick={handleClearFeaturedOverride} variant="secondary" disabled={isSavingFeatured}>
+                  Remove Override
+                </Button>
+              )}
+            </div>
+
+            {featuredOverride ? (
+              <div className="text-sm text-gray-300">
+                <p>Current override:</p>
+                <p className="text-gray-200">Video ID: {featuredOverride.videoId}</p>
+                <p className="text-gray-200 break-all">Thumbnail: {featuredOverride.thumbnailUrl}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">No override set. The featured video uses its default thumbnail.</p>
             )}
           </div>
         </section>

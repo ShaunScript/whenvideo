@@ -244,7 +244,7 @@ export function SiteHeader({ showTimer = false, timerData, isCompactMode = false
               <Button
                 size="icon"
                 variant="ghost"
-                className="hover:bg-transparent h-8 w-8 xl:h-10 xl:w-10 flex-shrink-0 border border-gray-600 rounded-full"
+                className="hover:bg-transparent h-8 w-8 xl:h-10 xl:w-10 flex-shrink-0 border border-gray-600 rounded-full grid place-items-center p-0"
                 onClick={() => setIsSearchExpanded(!isSearchExpanded)}
               >
                 <Search className="w-4 h-4 xl:w-5 xl:h-5" />

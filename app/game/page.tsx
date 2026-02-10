@@ -26,14 +26,56 @@ export default function GamePage() {
     animationId: 0,
   })
 
-  React.useEffect(() => {
-    const savedData = localStorage.getItem("flappyHighScoreData")
-    if (savedData) {
-      const parsed = JSON.parse(savedData)
-      setHighScore(parsed.score || 0)
-      setHighScoreName(parsed.name || "")
+  const loadHighScore = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/game/highscore", { cache: "no-store" })
+      if (res.ok) {
+        const json = await res.json()
+        const data = json?.data
+        if (data) {
+          setHighScore(data.score || 0)
+          setHighScoreName(data.name || "")
+          return
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load high score from API:", err)
+    }
+
+    try {
+      const savedData = localStorage.getItem("flappyHighScoreData")
+      if (savedData) {
+        const parsed = JSON.parse(savedData)
+        setHighScore(parsed.score || 0)
+        setHighScoreName(parsed.name || "")
+      }
+    } catch (err) {
+      console.error("Failed to load high score from localStorage:", err)
     }
   }, [])
+
+  React.useEffect(() => {
+    loadHighScore()
+  }, [loadHighScore])
+
+  const persistHighScore = async (score: number, name: string) => {
+    const payload = { score, name }
+    try {
+      await fetch("/api/game/highscore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+    } catch (err) {
+      console.error("Failed to save high score to API:", err)
+    }
+
+    try {
+      localStorage.setItem("flappyHighScoreData", JSON.stringify(payload))
+    } catch {
+      // ignore storage errors
+    }
+  }
 
   const triggerExplosion = (x: number, y: number) => {
     const particles = []
@@ -52,14 +94,15 @@ export default function GamePage() {
     setTimeout(() => setShake(false), 300)
   }
 
-  const handleNameSubmit = () => {
+  const handleNameSubmit = async () => {
     if (tempName.trim()) {
+      const name = tempName.trim()
       const highScoreData = {
         score: highScore,
-        name: tempName.trim(),
+        name,
       }
-      setHighScoreName(tempName.trim())
-      localStorage.setItem("flappyHighScoreData", JSON.stringify(highScoreData))
+      setHighScoreName(name)
+      await persistHighScore(highScoreData.score, highScoreData.name)
       setShowNameInput(false)
       setTempName("")
     }
