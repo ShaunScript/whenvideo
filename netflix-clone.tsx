@@ -598,7 +598,7 @@ aria-label="Patreon"
                   onClick={() => setIsSearchExpanded(!isSearchExpanded)}
                   aria-label="Search"
                 >
-                  <Search className="w-3.5 h-3.5 xl:w-5 xl:h-5" />
+                  <Search className="w-3.5 h-3.5 xl:w-5 xl:h-5 -translate-x-[0.5px]" />
                 </button>
 
                 <input
