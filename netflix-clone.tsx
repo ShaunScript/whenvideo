@@ -220,7 +220,7 @@ export default function Home() {
         setTvVideos(result.tvVideos)
         setFeaturedVideo(result.featuredVideo)
         try {
-          const res = await fetch("/api/admin/more/featured-thumbmail")
+          const res = await fetch("/api/admin/more/featured-thumbmail", { cache: "no-store" })
           const json = await res.json()
           const override = json?.data
         

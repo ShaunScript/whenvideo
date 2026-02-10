@@ -1,27 +1,45 @@
-import { promises as fs } from "fs"
-import path from "path"
-
-const FILE_PATH = path.join(process.cwd(), "data", "featured-thumbnail.json")
+import { pg } from "@/lib/db"
 
 type Data = { thumbnailUrl: string } | null
 
+let didInit = false
+
+async function ensureTable() {
+  if (didInit) return
+  didInit = true
+  await pg.query(`
+    CREATE TABLE IF NOT EXISTS featured_thumbnail_override (
+      id TEXT PRIMARY KEY,
+      thumbnail_url TEXT NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `)
+}
+
 export async function readFeaturedThumb(): Promise<Data> {
-  try {
-    const raw = await fs.readFile(FILE_PATH, "utf8")
-    const parsed = JSON.parse(raw)
-    if (parsed && typeof parsed === "object") {
-      // Backward compatibility: previously stored { videoId, thumbnailUrl }
-      if ("thumbnailUrl" in parsed) {
-        return { thumbnailUrl: (parsed as any).thumbnailUrl }
-      }
-    }
-    return null
-  } catch {
-    return null
-  }
+  await ensureTable()
+  const { rows } = await pg.query<{ thumbnail_url: string }>(
+    `SELECT thumbnail_url FROM featured_thumbnail_override WHERE id = 'featured' LIMIT 1`,
+  )
+  if (rows.length === 0) return null
+  return { thumbnailUrl: rows[0].thumbnail_url }
 }
 
 export async function writeFeaturedThumb(data: Data) {
-  await fs.mkdir(path.dirname(FILE_PATH), { recursive: true })
-  await fs.writeFile(FILE_PATH, JSON.stringify(data, null, 2), "utf8")
+  await ensureTable()
+  if (!data) {
+    await pg.query(`DELETE FROM featured_thumbnail_override WHERE id = 'featured'`)
+    return
+  }
+
+  await pg.query(
+    `
+    INSERT INTO featured_thumbnail_override (id, thumbnail_url, updated_at)
+    VALUES ('featured', $1, NOW())
+    ON CONFLICT (id) DO UPDATE SET
+      thumbnail_url = EXCLUDED.thumbnail_url,
+      updated_at = NOW()
+  `,
+    [data.thumbnailUrl],
+  )
 }

@@ -39,13 +39,9 @@ export async function POST(req: Request) {
     const mime = mimeFromExt[ext] ?? "image/png"
     const dataUrl = `data:${mime};base64,${base64}`
 
-    // Persist the data URL as the override
     await writeFeaturedThumb({ thumbnailUrl: dataUrl })
 
-    return NextResponse.json({
-      success: true,
-      url: dataUrl,
-    })
+    return NextResponse.json({ success: true, url: dataUrl })
   } catch (e) {
     console.error("[api/admin/more/featured-thumbmail/upload] error:", e)
     return NextResponse.json({ success: false, error: e instanceof Error ? e.message : "Upload failed" }, { status: 500 })
