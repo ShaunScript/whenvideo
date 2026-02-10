@@ -1,6 +1,6 @@
 "use server"
 
-import { fetchChannelVideos, filterLongVideos, fetchVideosByIds } from "@/lib/youtube-api"
+import { fetchChannelVideos, filterLongVideos, fetchVideosByIds, fetchChannelVideosByHandle } from "@/lib/youtube-api"
 
 export async function getYouTubeChannelData(maxResults = 50, moreVideoIds: string[] = []) {
   const apiKey = process.env.YOUTUBE_API_KEY
@@ -10,16 +10,22 @@ export async function getYouTubeChannelData(maxResults = 50, moreVideoIds: strin
   }
 
   try {
-    const data = await fetchChannelVideos(apiKey, maxResults)
-    const longs = filterLongVideos(data.videos)
+    const primary = await fetchChannelVideos(apiKey, maxResults)
+    const longs = filterLongVideos(primary.videos)
+
+    // TV Shows: use the NeedMoreDoza channel (handle)
+    const tvChannelHandle = "needmoredoza"
+    const tvData = await fetchChannelVideosByHandle(apiKey, tvChannelHandle, maxResults)
+    const tvVideos = tvData.videos
 
     const moreVids = moreVideoIds.length > 0 ? await fetchVideosByIds(apiKey, moreVideoIds) : []
 
     return {
-      channelData: data,
+      channelData: primary,
       longVideos: longs,
+      tvVideos,
       moreVideos: moreVids,
-      featuredVideo: longs.length > 0 ? longs[0] : data.videos.length > 0 ? data.videos[0] : null,
+      featuredVideo: longs.length > 0 ? longs[0] : primary.videos.length > 0 ? primary.videos[0] : null,
     }
   } catch (error) {
     console.error("Failed to load YouTube data:", error)

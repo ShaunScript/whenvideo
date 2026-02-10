@@ -76,10 +76,14 @@ function calculateStarRating(likes: number, views: number): number {
   return 0
 }
 
-export async function fetchChannelVideos(apiKey: string, maxResults = 10): Promise<YouTubeChannelData> {
+export async function fetchChannelVideos(
+  apiKey: string,
+  maxResults = 10,
+  channelId: string = CHANNEL_ID,
+): Promise<YouTubeChannelData> {
   // Fetch channel details
   const channelResponse = await fetch(
-    `https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails&id=${CHANNEL_ID}&key=${apiKey}`,
+    `https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails&id=${channelId}&key=${apiKey}`,
     { cache: "no-store" },
   )
 
@@ -119,6 +123,27 @@ export async function fetchChannelVideos(apiKey: string, maxResults = 10): Promi
     channelDescription: channel.snippet.description,
     videos,
   }
+}
+
+export async function fetchChannelVideosByHandle(
+  apiKey: string,
+  handle: string,
+  maxResults = 10,
+): Promise<YouTubeChannelData> {
+  // Resolve handle to channelId via search
+  const searchRes = await fetch(
+    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(handle)}&maxResults=1&key=${apiKey}`,
+    { cache: "no-store" },
+  )
+  if (!searchRes.ok) {
+    const txt = await searchRes.text()
+    throw new Error(`YouTube search error: ${searchRes.status} ${txt.substring(0, 200)}`)
+  }
+  const searchData = await searchRes.json()
+  const channelId = searchData?.items?.[0]?.snippet?.channelId
+  if (!channelId) throw new Error(`Channel not found for handle ${handle}`)
+
+  return fetchChannelVideos(apiKey, maxResults, channelId)
 }
 
 export function getMostRecentVideo(videos: YouTubeVideo[]): YouTubeVideo | null {

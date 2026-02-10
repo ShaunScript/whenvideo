@@ -49,8 +49,8 @@ export default function TwitchStatsPage() {
         <h1 className="text-3xl font-semibold mb-6 tracking-tight">Case Leaderboard</h1>
 
         {loading && (
-          <div className="flex justify-center py-24">
-            <Image src="/images/image.png" alt="Loading" width={400} height={400} className="opacity-70" />
+          <div className="flex justify-center py-16">
+            <div className="h-10 w-10 rounded-full border-4 border-white/30 border-t-white animate-spin" />
           </div>
         )}
 
