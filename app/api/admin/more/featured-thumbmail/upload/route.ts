@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server"
-import path from "path"
-import fs from "fs/promises"
+import { writeFeaturedThumb } from "@/lib/featured-thumbnail-cache"
 
 export const runtime = "nodejs"
 
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"]
 const MAX_BYTES = 8 * 1024 * 1024 // 8MB
+
+const mimeFromExt: Record<string, string> = {
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".webp": "image/webp",
+}
 
 export async function POST(req: Request) {
   try {
@@ -29,21 +35,16 @@ export async function POST(req: Request) {
     }
 
     const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
+    const base64 = Buffer.from(bytes).toString("base64")
+    const mime = mimeFromExt[ext] ?? "image/png"
+    const dataUrl = `data:${mime};base64,${base64}`
 
-    const uploadDir = path.join(process.cwd(), "public", "featured-uploads")
-    await fs.mkdir(uploadDir, { recursive: true })
-
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
-    const filename = `${Date.now()}-${safeName}`
-    const filepath = path.join(uploadDir, filename)
-
-    await fs.writeFile(filepath, buffer)
+    // Persist the data URL as the override
+    await writeFeaturedThumb({ thumbnailUrl: dataUrl })
 
     return NextResponse.json({
       success: true,
-      url: `/featured-uploads/${filename}`,
-      filename,
+      url: dataUrl,
     })
   } catch (e) {
     console.error("[api/admin/more/featured-thumbmail/upload] error:", e)
