@@ -82,8 +82,7 @@ export default function AdminPanel() {
   const [isLoading, setIsLoading] = useState(true)
   const [gameHighScore, setGameHighScore] = useState<{ score: number; name: string } | null>(null)
   const [newHighScoreName, setNewHighScoreName] = useState("")
-  const [featuredOverride, setFeaturedOverride] = useState<{ videoId: string; thumbnailUrl: string } | null>(null)
-  const [featuredVideoId, setFeaturedVideoId] = useState("")
+  const [featuredOverride, setFeaturedOverride] = useState<{ thumbnailUrl: string } | null>(null)
   const [featuredThumbUrl, setFeaturedThumbUrl] = useState("")
   const [isSavingFeatured, setIsSavingFeatured] = useState(false)
   const [featuredThumbFile, setFeaturedThumbFile] = useState<File | null>(null)
@@ -210,7 +209,6 @@ export default function AdminPanel() {
       const json = await res.json()
       const data = json?.data ?? null
       setFeaturedOverride(data)
-      setFeaturedVideoId(data?.videoId ?? "")
       setFeaturedThumbUrl(data?.thumbnailUrl ?? "")
     } catch (error) {
       console.error("Failed to load featured thumbnail override:", error)
@@ -218,8 +216,8 @@ export default function AdminPanel() {
   }
 
   const handleSaveFeaturedOverride = async () => {
-    if (!featuredVideoId.trim() || !featuredThumbUrl.trim()) {
-      showMessage("error", "Enter both a video ID and a thumbnail URL")
+    if (!featuredThumbUrl.trim()) {
+      showMessage("error", "Upload or paste a thumbnail URL first")
       return
     }
     setIsSavingFeatured(true)
@@ -227,7 +225,7 @@ export default function AdminPanel() {
       const res = await fetch("/api/admin/more/featured-thumbmail", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoId: featuredVideoId.trim(), thumbnailUrl: featuredThumbUrl.trim() }),
+        body: JSON.stringify({ thumbnailUrl: featuredThumbUrl.trim() }),
       })
       if (!res.ok) throw new Error("Save failed")
       await loadFeaturedOverride()
@@ -247,7 +245,6 @@ export default function AdminPanel() {
       const res = await fetch("/api/admin/more/featured-thumbmail", { method: "DELETE" })
       if (!res.ok) throw new Error("Delete failed")
       setFeaturedOverride(null)
-      setFeaturedVideoId("")
       setFeaturedThumbUrl("")
       showMessage("success", "Featured thumbnail cleared")
     } catch (error) {
@@ -634,25 +631,14 @@ export default function AdminPanel() {
         <section className="mb-12">
           <h2 className="text-xl font-semibold mb-4">Featured Thumbnail Override</h2>
           <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800 space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label className="text-white">Featured Video ID</Label>
-                <Input
-                  value={featuredVideoId}
-                  onChange={(e) => setFeaturedVideoId(e.target.value)}
-                  className="bg-black border-zinc-700 text-white"
-                  placeholder="YouTube video ID"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-white">Thumbnail URL (auto-filled after upload or paste manually)</Label>
-                <Input
-                  value={featuredThumbUrl}
-                  onChange={(e) => setFeaturedThumbUrl(e.target.value)}
-                  className="bg-black border-zinc-700 text-white"
-                  placeholder="https://..."
-                />
-              </div>
+            <div className="space-y-2">
+              <Label className="text-white">Thumbnail URL (auto-filled after upload or paste manually)</Label>
+              <Input
+                value={featuredThumbUrl}
+                onChange={(e) => setFeaturedThumbUrl(e.target.value)}
+                className="bg-black border-zinc-700 text-white"
+                placeholder="https://..."
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
@@ -690,7 +676,6 @@ export default function AdminPanel() {
             {featuredOverride ? (
               <div className="text-sm text-gray-300 space-y-2">
                 <p>Current override:</p>
-                <p className="text-gray-200">Video ID: {featuredOverride.videoId}</p>
                 <p className="text-gray-200 break-all">Thumbnail: {featuredOverride.thumbnailUrl}</p>
                 <div className="relative w-48 h-28 border border-zinc-800 rounded overflow-hidden">
                   <Image src={featuredOverride.thumbnailUrl || "/placeholder.svg"} alt="Featured thumb" fill className="object-cover" />

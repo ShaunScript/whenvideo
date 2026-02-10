@@ -224,7 +224,7 @@ export default function Home() {
           const json = await res.json()
           const override = json?.data
         
-          if (override?.videoId && override?.thumbnailUrl && result.featuredVideo?.id === override.videoId) {
+          if (override?.thumbnailUrl && result.featuredVideo) {
             setFeaturedVideo({ ...result.featuredVideo, thumbnail: override.thumbnailUrl })
           }
         } catch {}

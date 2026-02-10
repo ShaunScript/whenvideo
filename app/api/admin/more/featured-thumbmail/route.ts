@@ -9,8 +9,8 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const body = await req.json()
-  // body: { videoId, thumbnailUrl }
-  await writeFeaturedThumb({ videoId: body.videoId, thumbnailUrl: body.thumbnailUrl })
+  // body: { thumbnailUrl }
+  await writeFeaturedThumb({ thumbnailUrl: body.thumbnailUrl })
   return NextResponse.json({ success: true })
 }
 

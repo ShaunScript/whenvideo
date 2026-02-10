@@ -3,12 +3,19 @@ import path from "path"
 
 const FILE_PATH = path.join(process.cwd(), "data", "featured-thumbnail.json")
 
-type Data = { videoId: string; thumbnailUrl: string } | null
+type Data = { thumbnailUrl: string } | null
 
 export async function readFeaturedThumb(): Promise<Data> {
   try {
     const raw = await fs.readFile(FILE_PATH, "utf8")
-    return JSON.parse(raw)
+    const parsed = JSON.parse(raw)
+    if (parsed && typeof parsed === "object") {
+      // Backward compatibility: previously stored { videoId, thumbnailUrl }
+      if ("thumbnailUrl" in parsed) {
+        return { thumbnailUrl: (parsed as any).thumbnailUrl }
+      }
+    }
+    return null
   } catch {
     return null
   }
