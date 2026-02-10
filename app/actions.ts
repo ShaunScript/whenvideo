@@ -16,7 +16,7 @@ export async function getYouTubeChannelData(maxResults = 50, moreVideoIds: strin
     // TV Shows: use the NeedMoreDoza channel (handle)
     const tvChannelHandle = "needmoredoza"
     const tvData = await fetchChannelVideosByHandle(apiKey, tvChannelHandle, maxResults)
-    const tvVideos = tvData.videos
+    const tvVideos = filterLongVideos(tvData.videos)
 
     const moreVids = moreVideoIds.length > 0 ? await fetchVideosByIds(apiKey, moreVideoIds) : []
 
