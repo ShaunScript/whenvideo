@@ -220,16 +220,21 @@ export default function AdminPanel() {
       showMessage("error", "Upload or paste a thumbnail URL first")
       return
     }
+    await saveFeaturedUrl(featuredThumbUrl.trim())
+  }
+
+  const saveFeaturedUrl = async (url: string) => {
+    if (!url) return
     setIsSavingFeatured(true)
     try {
       const res = await fetch("/api/admin/more/featured-thumbmail", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ thumbnailUrl: featuredThumbUrl.trim() }),
+        body: JSON.stringify({ thumbnailUrl: url }),
       })
       if (!res.ok) throw new Error("Save failed")
       await loadFeaturedOverride()
-      showMessage("success", "Featured thumbnail updated")
+      showMessage("success", "Featured image updated")
     } catch (error) {
       console.error("Failed to save featured override:", error)
       showMessage("error", "Failed to save featured thumbnail")
@@ -275,7 +280,8 @@ export default function AdminPanel() {
 
       const url = json.url as string
       setFeaturedThumbUrl(url)
-      showMessage("success", "Image uploaded, URL filled below")
+      await saveFeaturedUrl(url)
+      showMessage("success", "Image uploaded and applied")
     } catch (error: any) {
       console.error("Failed to upload featured thumbnail:", error)
       showMessage("error", error?.message || "Upload failed")
@@ -657,20 +663,17 @@ export default function AdminPanel() {
                   disabled={isUploadingFeatured}
                   className="bg-zinc-700 hover:bg-zinc-600 flex-1"
                 >
-                  {isUploadingFeatured ? "Uploading..." : "Upload & Fill URL"}
+                  {isUploadingFeatured ? "Uploading..." : "Upload & Apply"}
                 </Button>
+                <Button onClick={handleSaveFeaturedOverride} disabled={isSavingFeatured} className="bg-red-600 hover:bg-red-700 flex-1">
+                  {isSavingFeatured ? "Saving..." : "Apply URL"}
+                </Button>
+                {featuredOverride && (
+                  <Button onClick={handleClearFeaturedOverride} variant="secondary" disabled={isSavingFeatured} className="flex-1">
+                    Remove Override
+                  </Button>
+                )}
               </div>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={handleSaveFeaturedOverride} disabled={isSavingFeatured} className="bg-red-600 hover:bg-red-700">
-                {isSavingFeatured ? "Saving..." : "Save Override"}
-              </Button>
-              {featuredOverride && (
-                <Button onClick={handleClearFeaturedOverride} variant="secondary" disabled={isSavingFeatured}>
-                  Remove Override
-                </Button>
-              )}
             </div>
 
             {featuredOverride ? (
@@ -682,7 +685,7 @@ export default function AdminPanel() {
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-gray-400">No override set. The featured video uses its default thumbnail.</p>
+              <p className="text-sm text-gray-400">No override set. Upload an image to replace the homepage hero.</p>
             )}
           </div>
         </section>
