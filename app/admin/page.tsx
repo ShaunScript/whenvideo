@@ -275,8 +275,17 @@ export default function AdminPanel() {
         body: fd,
       })
 
-      const json = await res.json()
-      if (!res.ok || !json?.success) throw new Error(json?.error || "Upload failed")
+      const text = await res.text()
+      let json: any = null
+      try {
+        json = JSON.parse(text)
+      } catch {
+        /* ignore */
+      }
+      if (!res.ok || !json?.success) {
+        const errMsg = json?.error || `Upload failed (${res.status})`
+        throw new Error(errMsg)
+      }
 
       const url = json.url as string
       setFeaturedThumbUrl(url)

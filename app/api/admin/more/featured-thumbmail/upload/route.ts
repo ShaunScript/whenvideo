@@ -4,7 +4,7 @@ import { writeFeaturedThumb } from "@/lib/featured-thumbnail-cache"
 export const runtime = "nodejs"
 
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"]
-const MAX_BYTES = 8 * 1024 * 1024 // 8MB
+const MAX_BYTES = 25 * 1024 * 1024 // 25MB
 
 const mimeFromExt: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     }
 
     if (file.size > MAX_BYTES) {
-      return NextResponse.json({ success: false, error: "File too large (max 8MB)" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "File too large (max 25MB)" }, { status: 400 })
     }
 
     const bytes = await file.arrayBuffer()
@@ -48,6 +48,6 @@ export async function POST(req: Request) {
     })
   } catch (e) {
     console.error("[api/admin/more/featured-thumbmail/upload] error:", e)
-    return NextResponse.json({ success: false, error: "Upload failed" }, { status: 500 })
+    return NextResponse.json({ success: false, error: e instanceof Error ? e.message : "Upload failed" }, { status: 500 })
   }
 }
