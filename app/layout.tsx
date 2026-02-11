@@ -17,24 +17,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "DØZA",
   description: "DØZA PRODUCTION",
-  openGraph: {
-    title: "DOZA",
-    description: "DOZA PRODUCTION",
-    images: [
-      {
-        url: "/images/doza-og.png",
-        width: 1200,
-        height: 630,
-        alt: "DOZA",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "DOZA",
-    description: "DOZA PRODUCTION",
-    images: ["/images/doza-og.png"],
-  },
   icons: {
     icon: [{ url: "/favicon.png", type: "image/png" }],
     apple: "/favicon.png",
