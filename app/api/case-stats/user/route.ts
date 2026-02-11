@@ -21,7 +21,7 @@ export async function GET(req: Request) {
       epic,
       legendary,
       inventory,
-      (common * 5 + epic * 15 + legendary * 25) as score
+      (common * 5 + epic * 25 + legendary * 50) as score
     from case_leaderboard
     where user_id = $1
     limit 1

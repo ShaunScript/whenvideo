@@ -92,7 +92,7 @@ export async function GET(req: Request) {
   const epic = epicParam || epicFromInventory
   const legendary = legendaryParam || legendaryFromInventory
   const opens = opensParam || common + epic + legendary
-  const score = common * 5 + epic * 15 + legendary * 25
+  const score = common * 5 + epic * 25 + legendary * 50
 
   const client = await pg.connect()
 

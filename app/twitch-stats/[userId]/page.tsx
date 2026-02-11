@@ -15,8 +15,8 @@ type UserInventory = {
 }
 
 const POINTS_COMMON = 5
-const POINTS_EPIC = 15
-const POINTS_LEGENDARY = 25
+const POINTS_EPIC = 25
+const POINTS_LEGENDARY = 50
 
 export default function UserInventoryPage({ params }: { params: { userId: string } }) {
   const [row, setRow] = useState<UserInventory | null>(null)

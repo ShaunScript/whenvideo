@@ -14,9 +14,9 @@ export async function GET() {
       epic,
       legendary,
       inventory,
-      (common * 5 + epic * 15 + legendary * 25) as score
+      (common * 5 + epic * 25 + legendary * 50) as score
     from case_leaderboard
-    order by (common * 5 + epic * 15 + legendary * 25) desc
+    order by (common * 5 + epic * 25 + legendary * 50) desc
     limit 50
   `)
 

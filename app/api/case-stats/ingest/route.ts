@@ -60,7 +60,7 @@ export async function POST(req: Request) {
       const epic = r.epic ?? r.epic_cases ?? epicFromInventory ?? 0
       const legendary = r.legendary ?? r.legendary_cases ?? legendaryFromInventory ?? 0
       const opens = r.opens ?? r.cases_opened ?? common + epic + legendary
-      const score = common * 5 + epic * 15 + legendary * 25
+      const score = common * 5 + epic * 25 + legendary * 50
 
       await client.query(
         `
