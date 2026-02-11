@@ -123,7 +123,7 @@ export function SiteHeader({ showTimer = false, timerData, isCompactMode = false
               href="/twitch-stats"
               className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap"
             >
-              Case & Stats
+              Leaderboard
             </Link>
 
             {/* Socials text button removed */}
