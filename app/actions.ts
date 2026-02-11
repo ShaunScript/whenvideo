@@ -28,7 +28,8 @@ export async function getYouTubeChannelData(maxResults = 50, moreVideoIds: strin
       featuredVideo: longs.length > 0 ? longs[0] : primary.videos.length > 0 ? primary.videos[0] : null,
     }
   } catch (error) {
-    console.error("Failed to load YouTube data:", error)
-    throw new Error("Failed to load YouTube videos. Please check your API key and try again.")
+    const detail = error instanceof Error ? error.message : String(error)
+    console.error("Failed to load YouTube data:", detail)
+    throw new Error(`Failed to load YouTube videos. ${detail}`)
   }
 }

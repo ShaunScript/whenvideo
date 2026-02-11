@@ -853,6 +853,11 @@ aria-label="Patreon"
             <p className="text-base sm:text-lg md:text-xl mb-6 text-gray-200">
               Unable to load videos from the channel.
             </p>
+            {apiError && (
+              <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+                Debug: {apiError}
+              </div>
+            )}
           </div>
         )}
       </section>
