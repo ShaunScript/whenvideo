@@ -68,8 +68,9 @@ export default function UserInventoryPage({ params }: { params: { userId: string
       <div className="pt-24 px-4 max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Inventory</h1>
-            {row && <div className="text-gray-400 mt-1">{row.userName}</div>}
+            <h1 className="text-3xl font-semibold tracking-tight">
+              {row ? `${row.userName} Inventory:` : "Inventory"}
+            </h1>
           </div>
           <a href="/twitch-stats" className="text-blue-300 hover:text-blue-200 underline underline-offset-2">
             Back to leaderboard

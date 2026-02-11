@@ -123,7 +123,7 @@ export default function TwitchStatsPage() {
                   <th className="px-4 py-3 text-left">#</th>
                   <th className="px-4 py-3 text-left">User</th>
                   <th className="px-4 py-3 text-right">Cash</th>
-                  <th className="px-4 py-3 text-right">Cases Opened</th>
+                  <th className="px-4 py-3 text-center">Cases Opened</th>
                   <th className="px-4 py-3 text-right">C</th>
                   <th className="px-4 py-3 text-right">E</th>
                   <th className="px-4 py-3 text-right">L</th>
@@ -147,7 +147,7 @@ export default function TwitchStatsPage() {
                       {row.userName}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold">${dollars}</td>
-                    <td className="px-4 py-3 text-right">{row.opens}</td>
+                    <td className="px-4 py-3 text-center">{row.opens}</td>
                     <td className="px-4 py-3 text-right text-blue-400">{row.common}</td>
                     <td className="px-4 py-3 text-right text-purple-400">{row.epic}</td>
                     <td className="px-4 py-3 text-right text-yellow-400">{row.legendary}</td>
