@@ -496,7 +496,7 @@ export default function Home() {
                 href="/twitch-stats"
                 className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap"
               >
-                Case & Stats
+                Leaderboard
               </Link>
 
             </nav>
