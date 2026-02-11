@@ -30,7 +30,11 @@ export async function GET(req: Request) {
   const commonParam = toInt(searchParams.get("common") ?? searchParams.get("common_cases"))
   const rare = toInt(searchParams.get("rare") ?? searchParams.get("rare_cases"))
   const epicParam = toInt(searchParams.get("epic") ?? searchParams.get("epic_cases"))
-  const legendaryParam = toInt(searchParams.get("legendary") ?? searchParams.get("legendary_cases"))
+  const legendaryParam = toInt(
+    searchParams.get("legendary") ??
+      searchParams.get("legendary_cases") ??
+      searchParams.get("legendary_count")
+  )
 
   const reserved = new Set([
     "userId",
@@ -46,6 +50,7 @@ export async function GET(req: Request) {
     "rare_cases",
     "epic_cases",
     "legendary_cases",
+    "legendary_count",
   ])
 
   const inventory: Record<string, number> = {}

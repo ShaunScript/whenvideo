@@ -121,7 +121,7 @@ export default function TwitchStatsPage() {
                   <tr key={row.userId} className="border-t border-white/5 hover:bg-white/5 transition">
                     <td className="px-4 py-3 text-gray-400">{i + 1}</td>
                     <td className={`px-4 py-3 font-medium ${isLeader ? "text-yellow-300" : ""}`}>
-                      {isLeader && <span className="mr-1">👑</span>}
+                      {isLeader && <span className="mr-1 inline-flex align-middle">👑</span>}
                       {row.userName}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold">${dollars}</td>
