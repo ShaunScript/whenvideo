@@ -26,6 +26,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: "missing_userId" }, { status: 400 })
   }
 
+  for (const [key, value] of searchParams.entries()) {
+    if (value.includes("%")) {
+      return NextResponse.json(
+        { ok: false, error: "unresolved_var", key, value },
+        { status: 400 }
+      )
+    }
+  }
+
   const opensParam = toInt(searchParams.get("opens") ?? searchParams.get("cases_opened"))
   const commonParam = toInt(searchParams.get("common") ?? searchParams.get("common_cases"))
   const rare = toInt(searchParams.get("rare") ?? searchParams.get("rare_cases"))
@@ -57,6 +66,14 @@ export async function GET(req: Request) {
   for (const [key, value] of searchParams.entries()) {
     if (reserved.has(key)) continue
     inventory[key] = toInt(value)
+  }
+
+  const hasInventory = Object.keys(inventory).length > 0
+  const hasCaseCounts =
+    opensParam !== 0 || commonParam !== 0 || epicParam !== 0 || legendaryParam !== 0
+
+  if (!hasInventory && !hasCaseCounts) {
+    return NextResponse.json({ ok: false, error: "empty_update" }, { status: 400 })
   }
 
   const commonFromInventory =

@@ -47,6 +47,15 @@ export default function UserInventoryPage({ params }: { params: { userId: string
     .filter(([, value]) => value > 0)
     .sort(([a], [b]) => a.localeCompare(b))
 
+  const formatInventoryLabel = (key: string) => {
+    let label = key.replace(/_(count|opened)$/, "")
+    label = label.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    label = label.replace(/_/g, " ")
+    label = label.toLowerCase()
+    if (!label.endsWith("s")) label = `${label}s`
+    return label
+  }
+
   const dollars =
     (row?.common ?? 0) * POINTS_COMMON +
     (row?.epic ?? 0) * POINTS_EPIC +
@@ -108,7 +117,7 @@ export default function UserInventoryPage({ params }: { params: { userId: string
                 <div className="flex flex-wrap gap-2">
                   {inventoryEntries.map(([key, value]) => (
                     <span key={key} className="rounded-full border border-white/10 bg-black/40 px-3 py-1 text-sm">
-                      {key}: {value}
+                      {formatInventoryLabel(key)}: {value}
                     </span>
                   ))}
                 </div>

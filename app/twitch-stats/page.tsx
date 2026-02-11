@@ -21,12 +21,21 @@ export default function TwitchStatsPage() {
   const [rows, setRows] = useState<LeaderboardRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [query, setQuery] = useState("")
 
-  const sortedRows = [...rows].sort((a, b) => {
+  const sortedRows = [...rows]
+    .filter((row) => row.userName.toLowerCase() !== "dozaproduction")
+    .sort((a, b) => {
     const aScore = a.common * POINTS_COMMON + a.epic * POINTS_EPIC + a.legendary * POINTS_LEGENDARY
     const bScore = b.common * POINTS_COMMON + b.epic * POINTS_EPIC + b.legendary * POINTS_LEGENDARY
     return bScore - aScore
-  })
+    })
+
+  const filteredRows = sortedRows.filter((row) =>
+    row.userName.toLowerCase().includes(query.trim().toLowerCase())
+  )
+
+  const topRows = filteredRows.slice(0, 20)
 
   const totals = rows.reduce(
     (acc, row) => {
@@ -96,6 +105,17 @@ export default function TwitchStatsPage() {
         )}
 
         {!loading && !error && rows.length > 0 && (
+          <div className="mb-4">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search username..."
+              className="w-full md:w-80 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-white/20"
+            />
+          </div>
+        )}
+
+        {!loading && !error && rows.length > 0 && (
           <div className="overflow-x-auto rounded-lg border border-white/10">
             <table className="w-full text-sm">
               <thead className="bg-white/5">
@@ -112,16 +132,18 @@ export default function TwitchStatsPage() {
               </thead>
 
               <tbody>
-                {sortedRows.map((row, i) => {
+                {topRows.map((row, i) => {
                   const dollars =
                     row.common * POINTS_COMMON + row.epic * POINTS_EPIC + row.legendary * POINTS_LEGENDARY
-                  const isLeader = i === 0
+                  const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : ""
+                  const nameClass =
+                    i === 0 ? "text-yellow-300" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-600" : ""
 
                   return (
                   <tr key={row.userId} className="border-t border-white/5 hover:bg-white/5 transition">
                     <td className="px-4 py-3 text-gray-400">{i + 1}</td>
-                    <td className={`px-4 py-3 font-medium ${isLeader ? "text-yellow-300" : ""}`}>
-                      {isLeader && <span className="mr-1 inline-flex align-middle">👑</span>}
+                    <td className={`px-4 py-3 font-medium ${nameClass}`}>
+                      {medal && <span className="mr-1 inline-flex align-middle">{medal}</span>}
                       {row.userName}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold">${dollars}</td>
