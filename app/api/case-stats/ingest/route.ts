@@ -29,11 +29,37 @@ export async function POST(req: Request) {
     await client.query("begin")
 
     for (const r of body.rows) {
-      const opens = r.opens ?? r.cases_opened ?? 0
-      const common = r.common ?? r.common_cases ?? 0
+      const inventory = r.inventory ?? null
+
+      const commonFromInventory =
+        (inventory?.boink_count ?? 0) +
+        (inventory?.cheeseburger_count ?? 0) +
+        (inventory?.happyJump_count ?? 0) +
+        (inventory?.kebab_count ?? 0) +
+        (inventory?.miku_count ?? 0) +
+        (inventory?.monster_count ?? 0) +
+        (inventory?.nugget_count ?? 0) +
+        (inventory?.rocky_count ?? 0) +
+        (inventory?.wings_opened ?? 0) +
+        (inventory?.wumpa_count ?? 0)
+
+      const epicFromInventory =
+        (inventory?.candy_count ?? 0) +
+        (inventory?.flashbang_count ?? 0) +
+        (inventory?.mikuShoots_count ?? 0) +
+        (inventory?.timeout_count ?? 0)
+
+      const legendaryFromInventory =
+        (inventory?.nuke_count ?? 0) +
+        (inventory?.taxRefund_count ?? 0) +
+        (inventory?.unVip_count ?? 0) +
+        (inventory?.vip_count ?? 0)
+
+      const common = r.common ?? r.common_cases ?? commonFromInventory ?? 0
       const rare = r.rare ?? r.rare_cases ?? 0
-      const epic = r.epic ?? r.epic_cases ?? 0
-      const legendary = r.legendary ?? r.legendary_cases ?? 0
+      const epic = r.epic ?? r.epic_cases ?? epicFromInventory ?? 0
+      const legendary = r.legendary ?? r.legendary_cases ?? legendaryFromInventory ?? 0
+      const opens = r.opens ?? r.cases_opened ?? common + epic + legendary
       const score = common * 5 + epic * 15 + legendary * 25
 
       await client.query(
@@ -62,7 +88,7 @@ export async function POST(req: Request) {
           rare,
           epic,
           legendary,
-          r.inventory ?? null,
+          inventory,
         ]
       )
     }

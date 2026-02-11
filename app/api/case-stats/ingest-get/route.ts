@@ -26,12 +26,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: "missing_userId" }, { status: 400 })
   }
 
-  const opens = toInt(searchParams.get("opens") ?? searchParams.get("cases_opened"))
-  const common = toInt(searchParams.get("common") ?? searchParams.get("common_cases"))
+  const opensParam = toInt(searchParams.get("opens") ?? searchParams.get("cases_opened"))
+  const commonParam = toInt(searchParams.get("common") ?? searchParams.get("common_cases"))
   const rare = toInt(searchParams.get("rare") ?? searchParams.get("rare_cases"))
-  const epic = toInt(searchParams.get("epic") ?? searchParams.get("epic_cases"))
-  const legendary = toInt(searchParams.get("legendary") ?? searchParams.get("legendary_cases"))
-  const score = common * 5 + epic * 15 + legendary * 25
+  const epicParam = toInt(searchParams.get("epic") ?? searchParams.get("epic_cases"))
+  const legendaryParam = toInt(searchParams.get("legendary") ?? searchParams.get("legendary_cases"))
 
   const reserved = new Set([
     "userId",
@@ -54,6 +53,36 @@ export async function GET(req: Request) {
     if (reserved.has(key)) continue
     inventory[key] = toInt(value)
   }
+
+  const commonFromInventory =
+    (inventory.boink_count ?? 0) +
+    (inventory.cheeseburger_count ?? 0) +
+    (inventory.happyJump_count ?? 0) +
+    (inventory.kebab_count ?? 0) +
+    (inventory.miku_count ?? 0) +
+    (inventory.monster_count ?? 0) +
+    (inventory.nugget_count ?? 0) +
+    (inventory.rocky_count ?? 0) +
+    (inventory.wings_opened ?? 0) +
+    (inventory.wumpa_count ?? 0)
+
+  const epicFromInventory =
+    (inventory.candy_count ?? 0) +
+    (inventory.flashbang_count ?? 0) +
+    (inventory.mikuShoots_count ?? 0) +
+    (inventory.timeout_count ?? 0)
+
+  const legendaryFromInventory =
+    (inventory.nuke_count ?? 0) +
+    (inventory.taxRefund_count ?? 0) +
+    (inventory.unVip_count ?? 0) +
+    (inventory.vip_count ?? 0)
+
+  const common = commonParam || commonFromInventory
+  const epic = epicParam || epicFromInventory
+  const legendary = legendaryParam || legendaryFromInventory
+  const opens = opensParam || common + epic + legendary
+  const score = common * 5 + epic * 15 + legendary * 25
 
   const client = await pg.connect()
 
