@@ -37,6 +37,8 @@ export default function TwitchStatsPage() {
 
   const topRows = filteredRows.slice(0, 20)
 
+  const rankByUserId = new Map(sortedRows.map((row, idx) => [row.userId, idx + 1]))
+
   const totals = rows.reduce(
     (acc, row) => {
       acc.opens += row.opens
@@ -132,18 +134,20 @@ export default function TwitchStatsPage() {
               </thead>
 
               <tbody>
-                {topRows.map((row, i) => {
+                {topRows.map((row) => {
                   const dollars =
                     row.common * POINTS_COMMON + row.epic * POINTS_EPIC + row.legendary * POINTS_LEGENDARY
-                  const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : ""
+                  const rank = rankByUserId.get(row.userId) ?? 0
+                  const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : ""
                   const nameClass =
-                    i === 0 ? "text-yellow-300" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-600" : ""
+                    rank === 1 ? "text-yellow-300" : rank === 2 ? "text-gray-300" : rank === 3 ? "text-amber-600" : ""
 
                   return (
                   <tr key={row.userId} className="border-t border-white/5 hover:bg-white/5 transition">
-                    <td className="px-4 py-3 text-gray-400">{i + 1}</td>
+                    <td className="px-4 py-3 text-gray-400">
+                      {medal ? <span className="inline-flex align-middle">{medal}</span> : rank || "-"}
+                    </td>
                     <td className={`px-4 py-3 font-medium ${nameClass}`}>
-                      {medal && <span className="mr-1 inline-flex align-middle">{medal}</span>}
                       {row.userName}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold">${dollars}</td>
