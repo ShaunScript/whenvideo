@@ -88,6 +88,7 @@ export default function Home() {
   const [featuredVideo, setFeaturedVideo] = React.useState<YouTubeVideo | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
   const [apiError, setApiError] = React.useState<string | null>(null)
+  const [debugInfo, setDebugInfo] = React.useState<string | null>(null)
   const videosSectionRef = React.useRef<HTMLDivElement>(null)
   const [videoModal, setVideoModal] = React.useState<{ isOpen: boolean; title: string; videoUrl: string }>({
     isOpen: false,
@@ -347,6 +348,23 @@ export default function Home() {
 
     loadData()
   }, [])
+
+  React.useEffect(() => {
+    const debug = searchParams.get("debug") === "1"
+    if (!debug || !apiError) return
+
+    const loadDebug = async () => {
+      try {
+        const res = await fetch("/api/debug/youtube", { cache: "no-store" })
+        const data = await res.json()
+        setDebugInfo(data?.error || "No debug error returned")
+      } catch (err) {
+        setDebugInfo("Failed to fetch debug info")
+      }
+    }
+
+    loadDebug()
+  }, [apiError, searchParams])
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -855,7 +873,7 @@ aria-label="Patreon"
             </p>
             {apiError && (
               <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
-                Debug: {apiError}
+                Debug: {debugInfo ?? apiError}
               </div>
             )}
           </div>
