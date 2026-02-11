@@ -55,7 +55,7 @@ export async function POST(req: Request) {
         (inventory?.unVip_count ?? 0) +
         (inventory?.vip_count ?? 0)
 
-      const common = r.common ?? r.common_cases ?? commonFromInventory ?? 0
+      const common = r.common ?? r.common_cases ?? r.common_count ?? commonFromInventory ?? 0
       const rare = r.rare ?? r.rare_cases ?? 0
       const epic = r.epic ?? r.epic_cases ?? epicFromInventory ?? 0
       const legendary = r.legendary ?? r.legendary_cases ?? legendaryFromInventory ?? 0

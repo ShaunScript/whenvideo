@@ -28,7 +28,9 @@ export async function GET(req: Request) {
 
 
   const opensParam = toInt(searchParams.get("opens") ?? searchParams.get("cases_opened"))
-  const commonParam = toInt(searchParams.get("common") ?? searchParams.get("common_cases"))
+  const commonParam = toInt(
+    searchParams.get("common") ?? searchParams.get("common_cases") ?? searchParams.get("common_count")
+  )
   const rare = toInt(searchParams.get("rare") ?? searchParams.get("rare_cases"))
   const epicParam = toInt(searchParams.get("epic") ?? searchParams.get("epic_cases"))
   const legendaryParam = toInt(
@@ -48,6 +50,7 @@ export async function GET(req: Request) {
     "legendary",
     "cases_opened",
     "common_cases",
+    "common_count",
     "rare_cases",
     "epic_cases",
     "legendary_cases",
