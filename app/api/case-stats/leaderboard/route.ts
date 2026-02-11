@@ -8,14 +8,15 @@ export async function GET() {
     select
       user_id as "userId",
       user_name as "userName",
-      score,
       opens,
       common,
       rare,
       epic,
-      legendary
+      legendary,
+      inventory,
+      (common * 5 + epic * 15 + legendary * 25) as score
     from case_leaderboard
-    order by score desc
+    order by (common * 5 + epic * 15 + legendary * 25) desc
     limit 50
   `)
 

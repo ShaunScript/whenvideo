@@ -25,15 +25,23 @@ export async function POST(req: Request) {
   const client = await pg.connect()
 
   try {
+    await client.query("alter table case_leaderboard add column if not exists inventory jsonb")
     await client.query("begin")
 
     for (const r of body.rows) {
+      const opens = r.opens ?? r.cases_opened ?? 0
+      const common = r.common ?? r.common_cases ?? 0
+      const rare = r.rare ?? r.rare_cases ?? 0
+      const epic = r.epic ?? r.epic_cases ?? 0
+      const legendary = r.legendary ?? r.legendary_cases ?? 0
+      const score = common * 5 + epic * 15 + legendary * 25
+
       await client.query(
         `
         insert into case_leaderboard
-          (user_id, user_name, score, opens, common, rare, epic, legendary, updated_at)
+          (user_id, user_name, score, opens, common, rare, epic, legendary, inventory, updated_at)
         values
-          ($1,$2,$3,$4,$5,$6,$7,$8, now())
+          ($1,$2,$3,$4,$5,$6,$7,$8,$9, now())
         on conflict (user_id) do update set
           user_name = excluded.user_name,
           score = excluded.score,
@@ -42,17 +50,19 @@ export async function POST(req: Request) {
           rare = excluded.rare,
           epic = excluded.epic,
           legendary = excluded.legendary,
+          inventory = excluded.inventory,
           updated_at = now()
         `,
         [
           r.userId,
           r.userName,
-          r.score ?? 0,
-          r.opens ?? 0,
-          r.common ?? 0,
-          r.rare ?? 0,
-          r.epic ?? 0,
-          r.legendary ?? 0,
+          score,
+          opens,
+          common,
+          rare,
+          epic,
+          legendary,
+          r.inventory ?? null,
         ]
       )
     }

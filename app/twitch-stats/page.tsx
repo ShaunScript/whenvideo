@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Image from "next/image"
 import { SiteHeader } from "@/components/site-header"
 
 type LeaderboardRow = {
@@ -13,12 +12,33 @@ type LeaderboardRow = {
   rare: number
   epic: number
   legendary: number
+  inventory?: Record<string, number>
 }
+
+const POINTS_COMMON = 5
+const POINTS_EPIC = 15
+const POINTS_LEGENDARY = 25
 
 export default function TwitchStatsPage() {
   const [rows, setRows] = useState<LeaderboardRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const sortedRows = [...rows].sort((a, b) => {
+    const aScore = a.common * POINTS_COMMON + a.epic * POINTS_EPIC + a.legendary * POINTS_LEGENDARY
+    const bScore = b.common * POINTS_COMMON + b.epic * POINTS_EPIC + b.legendary * POINTS_LEGENDARY
+    return bScore - aScore
+  })
+
+  const totals = rows.reduce(
+    (acc, row) => {
+      acc.opens += row.opens
+      acc.epic += row.epic
+      acc.legendary += row.legendary
+      return acc
+    },
+    { opens: 0, epic: 0, legendary: 0 }
+  )
 
   useEffect(() => {
     const load = async () => {
@@ -48,6 +68,23 @@ export default function TwitchStatsPage() {
       <div className="pt-24 px-4 max-w-6xl mx-auto">
         <h1 className="text-3xl font-semibold mb-6 tracking-tight">Case Leaderboard</h1>
 
+        {!loading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+              <div className="text-xs uppercase tracking-wide text-gray-400">Total Cases Opened</div>
+              <div className="text-2xl font-semibold mt-1">{totals.opens}</div>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+              <div className="text-xs uppercase tracking-wide text-gray-400">Total Epic Cases</div>
+              <div className="text-2xl font-semibold mt-1">{totals.epic}</div>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+              <div className="text-xs uppercase tracking-wide text-gray-400">Total Legendary Cases</div>
+              <div className="text-2xl font-semibold mt-1">{totals.legendary}</div>
+            </div>
+          </div>
+        )}
+
         {loading && (
           <div className="flex justify-center py-16">
             <div className="h-10 w-10 rounded-full border-4 border-white/30 border-t-white animate-spin" />
@@ -67,28 +104,56 @@ export default function TwitchStatsPage() {
                 <tr>
                   <th className="px-4 py-3 text-left">#</th>
                   <th className="px-4 py-3 text-left">User</th>
-                  <th className="px-4 py-3 text-right">Score</th>
+                  <th className="px-4 py-3 text-right">Dollars</th>
                   <th className="px-4 py-3 text-right">Opens</th>
                   <th className="px-4 py-3 text-right">C</th>
                   <th className="px-4 py-3 text-right">R</th>
                   <th className="px-4 py-3 text-right">E</th>
                   <th className="px-4 py-3 text-right">L</th>
+                  <th className="px-4 py-3 text-left">Inventory</th>
                 </tr>
               </thead>
 
               <tbody>
-                {rows.map((row, i) => (
+                {sortedRows.map((row, i) => {
+                  const dollars =
+                    row.common * POINTS_COMMON + row.epic * POINTS_EPIC + row.legendary * POINTS_LEGENDARY
+                  const inventoryEntries = Object.entries(row.inventory ?? {})
+                    .filter(([, value]) => value > 0)
+                    .sort(([a], [b]) => a.localeCompare(b))
+
+                  return (
                   <tr key={row.userId} className="border-t border-white/5 hover:bg-white/5 transition">
                     <td className="px-4 py-3 text-gray-400">{i + 1}</td>
                     <td className="px-4 py-3 font-medium">{row.userName}</td>
-                    <td className="px-4 py-3 text-right font-semibold">{row.score}</td>
+                    <td className="px-4 py-3 text-right font-semibold">${dollars}</td>
                     <td className="px-4 py-3 text-right">{row.opens}</td>
                     <td className="px-4 py-3 text-right text-gray-300">{row.common}</td>
                     <td className="px-4 py-3 text-right text-blue-400">{row.rare}</td>
                     <td className="px-4 py-3 text-right text-purple-400">{row.epic}</td>
                     <td className="px-4 py-3 text-right text-yellow-400">{row.legendary}</td>
+                    <td className="px-4 py-3">
+                      {inventoryEntries.length === 0 ? (
+                        <span className="text-gray-500">None</span>
+                      ) : (
+                        <details>
+                          <summary className="cursor-pointer text-gray-300 hover:text-white">View</summary>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {inventoryEntries.map(([key, value]) => (
+                              <span
+                                key={key}
+                                className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs"
+                              >
+                                {key}: {value}
+                              </span>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
