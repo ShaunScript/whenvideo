@@ -144,7 +144,7 @@ export default function TwitchStatsPage() {
 
                   return (
                   <tr key={row.userId} className="border-t border-white/5 hover:bg-white/5 transition">
-                    <td className="px-4 py-3 text-gray-400">
+                    <td className="px-4 py-3 text-gray-400 text-center">
                       {medal ? <span className="inline-flex align-middle">{medal}</span> : rank || "-"}
                     </td>
                     <td className={`px-4 py-3 font-medium ${nameClass}`}>
