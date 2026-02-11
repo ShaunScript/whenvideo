@@ -9,10 +9,8 @@ type LeaderboardRow = {
   score: number
   opens: number
   common: number
-  rare: number
   epic: number
   legendary: number
-  inventory?: Record<string, number>
 }
 
 const POINTS_COMMON = 5
@@ -104,10 +102,9 @@ export default function TwitchStatsPage() {
                 <tr>
                   <th className="px-4 py-3 text-left">#</th>
                   <th className="px-4 py-3 text-left">User</th>
-                  <th className="px-4 py-3 text-right">Dollars</th>
-                  <th className="px-4 py-3 text-right">Opens</th>
+                  <th className="px-4 py-3 text-right">Cash</th>
+                  <th className="px-4 py-3 text-right">Cases Opened</th>
                   <th className="px-4 py-3 text-right">C</th>
-                  <th className="px-4 py-3 text-right">R</th>
                   <th className="px-4 py-3 text-right">E</th>
                   <th className="px-4 py-3 text-right">L</th>
                   <th className="px-4 py-3 text-left">Inventory</th>
@@ -118,38 +115,27 @@ export default function TwitchStatsPage() {
                 {sortedRows.map((row, i) => {
                   const dollars =
                     row.common * POINTS_COMMON + row.epic * POINTS_EPIC + row.legendary * POINTS_LEGENDARY
-                  const inventoryEntries = Object.entries(row.inventory ?? {})
-                    .filter(([, value]) => value > 0)
-                    .sort(([a], [b]) => a.localeCompare(b))
+                  const isLeader = i === 0
 
                   return (
                   <tr key={row.userId} className="border-t border-white/5 hover:bg-white/5 transition">
                     <td className="px-4 py-3 text-gray-400">{i + 1}</td>
-                    <td className="px-4 py-3 font-medium">{row.userName}</td>
+                    <td className={`px-4 py-3 font-medium ${isLeader ? "text-yellow-300" : ""}`}>
+                      {row.userName}
+                      {isLeader && <span className="ml-2">👑</span>}
+                    </td>
                     <td className="px-4 py-3 text-right font-semibold">${dollars}</td>
                     <td className="px-4 py-3 text-right">{row.opens}</td>
-                    <td className="px-4 py-3 text-right text-gray-300">{row.common}</td>
-                    <td className="px-4 py-3 text-right text-blue-400">{row.rare}</td>
+                    <td className="px-4 py-3 text-right text-blue-400">{row.common}</td>
                     <td className="px-4 py-3 text-right text-purple-400">{row.epic}</td>
                     <td className="px-4 py-3 text-right text-yellow-400">{row.legendary}</td>
                     <td className="px-4 py-3">
-                      {inventoryEntries.length === 0 ? (
-                        <span className="text-gray-500">None</span>
-                      ) : (
-                        <details>
-                          <summary className="cursor-pointer text-gray-300 hover:text-white">View</summary>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {inventoryEntries.map(([key, value]) => (
-                              <span
-                                key={key}
-                                className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs"
-                              >
-                                {key}: {value}
-                              </span>
-                            ))}
-                          </div>
-                        </details>
-                      )}
+                      <a
+                        href={`/twitch-stats/${row.userId}`}
+                        className="text-blue-300 hover:text-blue-200 underline underline-offset-2"
+                      >
+                        View
+                      </a>
                     </td>
                   </tr>
                   )
