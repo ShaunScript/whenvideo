@@ -124,9 +124,9 @@ export default function TwitchStatsPage() {
                 <tr>
                   <th className="px-4 py-3 text-left">#</th>
                   <th className="px-4 py-3 text-left">User</th>
-                  <th className="px-4 py-3 text-right">Cash</th>
-                  <th className="px-4 py-3 text-center">Cases Opened</th>
-                  <th className="px-4 py-3 text-right">C</th>
+                  <th className="px-2 py-3 text-left w-20">Cash</th>
+                  <th className="px-2 py-3 text-center w-28">Cases Opened</th>
+                  <th className="px-2 py-3 text-right w-16">C</th>
                   <th className="px-4 py-3 text-right">E</th>
                   <th className="px-4 py-3 text-right">L</th>
                   <th className="px-4 py-3 text-center">Inventory</th>
@@ -150,9 +150,9 @@ export default function TwitchStatsPage() {
                     <td className={`px-4 py-3 font-medium ${nameClass}`}>
                       {row.userName}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold">${dollars}</td>
-                    <td className="px-4 py-3 text-center">{row.opens}</td>
-                    <td className="px-4 py-3 text-right text-blue-400">{row.common}</td>
+                    <td className="px-2 py-3 text-left font-semibold w-20">${dollars}</td>
+                    <td className="px-2 py-3 text-center w-28">{row.opens}</td>
+                    <td className="px-2 py-3 text-right text-blue-400 w-16">{row.common}</td>
                     <td className="px-4 py-3 text-right text-purple-400">{row.epic}</td>
                     <td className="px-4 py-3 text-right text-yellow-400">{row.legendary}</td>
                     <td className="px-4 py-3 text-center">
