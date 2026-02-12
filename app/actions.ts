@@ -1,12 +1,12 @@
 "use server"
 
+import { getYouTubeCache, setYouTubeCache } from "@/lib/youtube-cache"
 import { fetchChannelVideos, filterLongVideos, fetchVideosByIds } from "@/lib/youtube-api"
 
 const CACHE_TTL_MS = 10 * 60 * 1000
-const cache = new Map<string, { expiresAt: number; data: Awaited<ReturnType<typeof loadFreshData>> }>()
 
 function cacheKey(maxResults: number, moreVideoIds: string[]) {
-  return `${maxResults}|${moreVideoIds.join(",")}`
+  return `yt:${maxResults}:${moreVideoIds.join(",")}`
 }
 
 async function loadFreshData(maxResults: number, moreVideoIds: string[]) {
@@ -37,16 +37,12 @@ async function loadFreshData(maxResults: number, moreVideoIds: string[]) {
 
 export async function getYouTubeChannelData(maxResults = 50, moreVideoIds: string[] = []) {
   const key = cacheKey(maxResults, moreVideoIds)
-  const now = Date.now()
-  const cached = cache.get(key)
-
-  if (cached && cached.expiresAt > now) {
-    return cached.data
-  }
+  const cached = await getYouTubeCache<Awaited<ReturnType<typeof loadFreshData>>>(key, CACHE_TTL_MS, true)
+  if (cached?.isFresh) return cached.data
 
   try {
     const data = await loadFreshData(maxResults, moreVideoIds)
-    cache.set(key, { expiresAt: now + CACHE_TTL_MS, data })
+    await setYouTubeCache(key, data)
     return data
   } catch (error) {
     if (cached) {

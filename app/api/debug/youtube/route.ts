@@ -17,7 +17,7 @@ export async function GET() {
   }
 
   try {
-    await fetchChannelVideos(apiKey, 5, "UC4b2HUYYJIMd8LwiSzLpetQ")
+    await fetchChannelVideos(apiKey, 5, "UCNjCUNud_fzWjzswDI46rsg")
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error)
     return NextResponse.json({ ok: false, error: detail }, { status: 500 })
