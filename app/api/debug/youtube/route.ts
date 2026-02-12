@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { fetchChannelVideos, fetchChannelVideosByHandle } from "@/lib/youtube-api"
+import { fetchChannelVideos } from "@/lib/youtube-api"
 
 export const runtime = "nodejs"
 
@@ -17,7 +17,7 @@ export async function GET() {
   }
 
   try {
-    await fetchChannelVideosByHandle(apiKey, "needmoredoza", 5)
+    await fetchChannelVideos(apiKey, 5, "UC4b2HUYYJIMd8LwiSzLpetQ")
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error)
     return NextResponse.json({ ok: false, error: detail }, { status: 500 })
