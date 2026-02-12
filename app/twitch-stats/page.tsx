@@ -164,7 +164,7 @@ export default function TwitchStatsPage() {
                     <td className="px-4 py-3 text-center">
                       <a
                         href={`/twitch-stats/${row.userId}`}
-                        className="inline-flex items-center justify-center rounded-full bg-[#8f1c20] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#6f1418]"
+                        className="inline-flex items-center justify-center rounded-lg bg-[#b83236] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#8f2428]"
                       >
                         View
                       </a>
