@@ -75,7 +75,7 @@ export default function TwitchStatsPage() {
       <SiteHeader />
 
       <div className="pt-24 px-4 max-w-6xl mx-auto">
-        <h1 className="text-7xl font-medium mb-6 tracking-tight text-center">Case Leaderboard</h1>
+        <h1 className="text-8xl font-normal uppercase mb-6 tracking-tight text-center">Case Leaderboard</h1>
 
         {!loading && !error && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -122,7 +122,7 @@ export default function TwitchStatsPage() {
             <table className="w-full text-sm">
               <thead className="bg-white/5">
                 <tr>
-                  <th className="px-4 py-3 text-left">#</th>
+                  <th className="px-4 py-3 text-center w-10">#</th>
                   <th className="px-4 py-3 text-left">User</th>
                   <th className="px-2 py-3 text-left w-20">Cash</th>
                   <th className="px-2 py-3 text-center w-28">Cases Opened</th>
@@ -140,11 +140,17 @@ export default function TwitchStatsPage() {
                   const rank = rankByUserId.get(row.userId) ?? 0
                   const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : ""
                   const nameClass =
-                    rank === 1 ? "text-yellow-300" : rank === 2 ? "text-gray-300" : rank === 3 ? "text-amber-600" : ""
+                    rank === 1
+                      ? "text-yellow-300 drop-shadow-[0_0_8px_rgba(253,224,71,0.9)]"
+                      : rank === 2
+                        ? "text-gray-300 drop-shadow-[0_0_8px_rgba(209,213,219,0.9)]"
+                        : rank === 3
+                          ? "text-amber-600 drop-shadow-[0_0_8px_rgba(217,119,6,0.9)]"
+                          : ""
 
                   return (
                   <tr key={row.userId} className="border-t border-white/5 hover:bg-white/5 transition">
-                    <td className="px-4 py-3 text-gray-400 text-center">
+                    <td className="px-4 py-3 text-gray-400 text-center w-10 align-middle">
                       {medal ? <span className="inline-flex align-middle">{medal}</span> : rank || "-"}
                     </td>
                     <td className={`px-4 py-3 font-medium ${nameClass}`}>
