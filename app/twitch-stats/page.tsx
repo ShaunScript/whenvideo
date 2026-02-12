@@ -75,19 +75,19 @@ export default function TwitchStatsPage() {
       <SiteHeader />
 
       <div className="pt-24 px-4 max-w-6xl mx-auto">
-        <h1 className="text-3xl font-semibold mb-6 tracking-tight">Case Leaderboard</h1>
+        <h1 className="text-7xl font-medium mb-6 tracking-tight text-center">Case Leaderboard</h1>
 
         {!loading && !error && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+            <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center">
               <div className="text-xs uppercase tracking-wide text-gray-400">Total Cases Opened</div>
               <div className="text-2xl font-semibold mt-1">{totals.opens}</div>
             </div>
-            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+            <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center">
               <div className="text-xs uppercase tracking-wide text-gray-400">Total Epic Cases</div>
               <div className="text-2xl font-semibold mt-1">{totals.epic}</div>
             </div>
-            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+            <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center">
               <div className="text-xs uppercase tracking-wide text-gray-400">Total Legendary Cases</div>
               <div className="text-2xl font-semibold mt-1">{totals.legendary}</div>
             </div>
@@ -129,7 +129,7 @@ export default function TwitchStatsPage() {
                   <th className="px-4 py-3 text-right">C</th>
                   <th className="px-4 py-3 text-right">E</th>
                   <th className="px-4 py-3 text-right">L</th>
-                  <th className="px-4 py-3 text-left">Inventory</th>
+                  <th className="px-4 py-3 text-center">Inventory</th>
                 </tr>
               </thead>
 
@@ -155,10 +155,10 @@ export default function TwitchStatsPage() {
                     <td className="px-4 py-3 text-right text-blue-400">{row.common}</td>
                     <td className="px-4 py-3 text-right text-purple-400">{row.epic}</td>
                     <td className="px-4 py-3 text-right text-yellow-400">{row.legendary}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-center">
                       <a
                         href={`/twitch-stats/${row.userId}`}
-                        className="text-blue-300 hover:text-blue-200 underline underline-offset-2"
+                        className="inline-flex items-center justify-center rounded-full bg-[#8f1c20] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#6f1418]"
                       >
                         View
                       </a>
