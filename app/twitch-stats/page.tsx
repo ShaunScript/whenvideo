@@ -20,31 +20,44 @@ export default function TwitchStatsPage() {
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState("")
 
-  const inventoryPrices: Record<string, number> = {
-    boink_count: 2,
-    cheeseburger_count: 1,
-    happyJump_count: 2,
-    kebab_count: 2,
-    miku_count: 3,
-    mikuShoots_count: 14,
-    monster_count: 2,
-    nugget_count: 1,
-    rocky_count: 3,
-    wings_count: 3,
-    wumpa_count: 1,
-    candy_count: 18,
-    flashbang_count: 24,
-    timeout_count: 10,
-    nuke_count: 66,
-    taxRefund_count: 50,
-    unVip_count: 32,
-    vip_count: 100,
+  const inventoryPrices = [
+    { key: "boink_count", altKeys: ["boink"], price: 2 },
+    { key: "cheeseburger_count", price: 1 },
+    { key: "happyJump_count", price: 2 },
+    { key: "kebab_count", price: 2 },
+    { key: "miku_count", price: 3 },
+    { key: "mikuShoots_count", price: 14 },
+    { key: "monster_count", price: 2 },
+    { key: "nugget_count", price: 1 },
+    { key: "rocky_count", price: 3 },
+    { key: "wings_count", altKeys: ["wings_opened"], price: 3 },
+    { key: "wumpa_count", price: 1 },
+    { key: "candy_count", price: 18 },
+    { key: "flashbang_count", price: 24 },
+    { key: "timeout_count", price: 10 },
+    { key: "nuke_count", price: 66 },
+    { key: "taxRefund_count", price: 50 },
+    { key: "unVip_count", price: 32 },
+    { key: "vip_count", price: 100 },
+  ]
+
+  const getInventoryValue = (row: LeaderboardRow, key: string, altKeys?: string[]) => {
+    const inventory = row.inventory ?? {}
+    const primary = inventory[key]
+    if (primary !== undefined && primary !== null) return primary
+    if (altKeys) {
+      for (const altKey of altKeys) {
+        const value = inventory[altKey]
+        if (value !== undefined && value !== null) return value
+      }
+    }
+    return 0
   }
 
   const profitForRow = (row: LeaderboardRow) => {
-    const rewards = Object.entries(inventoryPrices).reduce((acc, [key, price]) => {
-      const count = row.inventory?.[key] ?? 0
-      return acc + count * price
+    const rewards = inventoryPrices.reduce((acc, item) => {
+      const count = getInventoryValue(row, item.key, item.altKeys)
+      return acc + count * item.price
     }, 0)
     const caseCost = (row.opens ?? 0) * 5
     return rewards - caseCost
