@@ -60,7 +60,7 @@ export default function UserInventoryPage({ params }: { params: { userId: string
     { key: "timeout_count", label: "Timeouts", image: "/inventory-items/timeout_00000.png", price: 10 },
     { key: "nuke_count", label: "Nukes", image: "/inventory-items/Nuke_00000.png", price: 66 },
     { key: "taxRefund_count", label: "Tax Refunds", image: "/inventory-items/TAX_00000.png", price: 50 },
-    { key: "unVip_count", label: "INVips", image: "/inventory-items/INVIP_00000.png", price: 32 },
+    { key: "unVip_count", label: "Fake VIP", image: "/inventory-items/INVIP_00000.png", price: 32 },
     { key: "vip_count", label: "VIPs", image: "/inventory-items/VIP_00000.png", price: 100 },
   ]
 

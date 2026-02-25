@@ -11,11 +11,8 @@ type LeaderboardRow = {
   common: number
   epic: number
   legendary: number
+  inventory?: Record<string, number>
 }
-
-const POINTS_COMMON = 5
-const POINTS_EPIC = 25
-const POINTS_LEGENDARY = 50
 
 export default function TwitchStatsPage() {
   const [rows, setRows] = useState<LeaderboardRow[]>([])
@@ -23,19 +20,54 @@ export default function TwitchStatsPage() {
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState("")
 
+  const inventoryPrices: Record<string, number> = {
+    boink_count: 2,
+    cheeseburger_count: 1,
+    happyJump_count: 2,
+    kebab_count: 2,
+    miku_count: 3,
+    mikuShoots_count: 14,
+    monster_count: 2,
+    nugget_count: 1,
+    rocky_count: 3,
+    wings_opened: 3,
+    wumpa_count: 1,
+    candy_count: 18,
+    flashbang_count: 24,
+    timeout_count: 10,
+    nuke_count: 66,
+    taxRefund_count: 50,
+    unVip_count: 32,
+    vip_count: 100,
+  }
+
+  const profitForRow = (row: LeaderboardRow) => {
+    const rewards = Object.entries(inventoryPrices).reduce((acc, [key, price]) => {
+      const count = row.inventory?.[key] ?? 0
+      return acc + count * price
+    }, 0)
+    const caseCost = (row.opens ?? 0) * 5
+    return rewards - caseCost
+  }
+
   const sortedRows = [...rows]
     .filter((row) => row.userName.toLowerCase() !== "dozaproduction")
     .sort((a, b) => {
-    const aScore = a.common * POINTS_COMMON + a.epic * POINTS_EPIC + a.legendary * POINTS_LEGENDARY
-    const bScore = b.common * POINTS_COMMON + b.epic * POINTS_EPIC + b.legendary * POINTS_LEGENDARY
-    return bScore - aScore
+    const aProfit = profitForRow(a)
+    const bProfit = profitForRow(b)
+    return bProfit - aProfit
     })
 
   const filteredRows = sortedRows.filter((row) =>
     row.userName.toLowerCase().includes(query.trim().toLowerCase())
   )
 
-  const topRows = filteredRows.slice(0, 20)
+  const [page, setPage] = useState(1)
+  const pageSize = 20
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize))
+  const safePage = Math.min(page, totalPages)
+  const startIndex = (safePage - 1) * pageSize
+  const pagedRows = filteredRows.slice(startIndex, startIndex + pageSize)
 
   const rankByUserId = new Map(sortedRows.map((row, idx) => [row.userId, idx + 1]))
 
@@ -69,6 +101,10 @@ export default function TwitchStatsPage() {
 
     load()
   }, [])
+
+  useEffect(() => {
+    setPage(1)
+  }, [query])
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -124,7 +160,7 @@ export default function TwitchStatsPage() {
                 <tr>
                   <th className="px-4 py-3 text-center w-10">#</th>
                   <th className="px-4 py-3 text-left">User</th>
-                  <th className="px-2 py-3 text-left w-20">Cash</th>
+                  <th className="px-2 py-3 text-left w-20">Profit</th>
                   <th className="px-2 py-3 text-center w-28">Cases Opened</th>
                   <th className="px-2 py-3 text-right w-16">C</th>
                   <th className="px-4 py-3 text-right">E</th>
@@ -134,9 +170,10 @@ export default function TwitchStatsPage() {
               </thead>
 
               <tbody>
-                {topRows.map((row) => {
-                  const dollars =
-                    row.common * POINTS_COMMON + row.epic * POINTS_EPIC + row.legendary * POINTS_LEGENDARY
+                {pagedRows.map((row) => {
+                  const profit = profitForRow(row)
+                  const profitLabel = `${profit >= 0 ? "+" : "-"}$${Math.abs(profit)}`
+                  const profitClass = profit >= 0 ? "text-green-400" : "text-red-400"
                   const rank = rankByUserId.get(row.userId) ?? 0
                   const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : ""
                   const nameClass =
@@ -156,7 +193,7 @@ export default function TwitchStatsPage() {
                     <td className={`px-4 py-3 font-medium ${nameClass}`}>
                       {row.userName}
                     </td>
-                    <td className="px-2 py-3 text-left font-semibold w-20">${dollars}</td>
+                    <td className={`px-2 py-3 text-left w-20 ${profitClass}`}>{profitLabel}</td>
                     <td className="px-2 py-3 text-center w-28">{row.opens}</td>
                     <td className="px-2 py-3 text-right text-blue-400 w-16">{row.common}</td>
                     <td className="px-4 py-3 text-right text-purple-400">{row.epic}</td>
@@ -174,6 +211,25 @@ export default function TwitchStatsPage() {
                 })}
               </tbody>
             </table>
+          </div>
+          <div className="mt-4 flex items-center justify-center gap-4">
+            <button
+              className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white hover:bg-white/10 disabled:opacity-40"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={safePage === 1}
+            >
+              ←
+            </button>
+            <div className="text-sm text-gray-400">
+              Page {safePage} of {totalPages}
+            </div>
+            <button
+              className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white hover:bg-white/10 disabled:opacity-40"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage === totalPages}
+            >
+              →
+            </button>
           </div>
         )}
       </div>

@@ -13,11 +13,9 @@ export async function GET() {
       rare,
       epic,
       legendary,
-      inventory,
-      (common * 5 + epic * 25 + legendary * 50) as score
+      inventory
     from case_leaderboard
-    order by (common * 5 + epic * 25 + legendary * 50) desc
-    limit 50
+    order by updated_at desc
   `)
 
   return NextResponse.json({ ok: true, rows })
