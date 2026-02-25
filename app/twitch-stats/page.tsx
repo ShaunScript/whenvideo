@@ -43,12 +43,17 @@ export default function TwitchStatsPage() {
 
   const getInventoryValue = (row: LeaderboardRow, key: string, altKeys?: string[]) => {
     const inventory = row.inventory ?? {}
+    const toNumber = (value: unknown) => {
+      if (value === undefined || value === null) return 0
+      const num = Number(value)
+      return Number.isFinite(num) ? num : 0
+    }
     const primary = inventory[key]
-    if (primary !== undefined && primary !== null) return primary
+    if (primary !== undefined && primary !== null) return toNumber(primary)
     if (altKeys) {
       for (const altKey of altKeys) {
         const value = inventory[altKey]
-        if (value !== undefined && value !== null) return value
+        if (value !== undefined && value !== null) return toNumber(value)
       }
     }
     return 0
