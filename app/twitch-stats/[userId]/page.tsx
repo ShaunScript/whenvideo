@@ -53,7 +53,7 @@ export default function UserInventoryPage({ params }: { params: { userId: string
     { key: "monster_count", label: "Monsters", image: "/inventory-items/Monster_00000.png", price: 2 },
     { key: "nugget_count", label: "Nuggets", image: "/inventory-items/Nugget_00000.png", price: 1 },
     { key: "rocky_count", label: "Rockys", image: "/inventory-items/Rocky_00000.png", price: 3 },
-    { key: "wings_opened", label: "Wings", image: "/inventory-items/Wings_00000.png", price: 3 },
+    { key: "wings_count", label: "Wings", image: "/inventory-items/Wings_00000.png", price: 3 },
     { key: "wumpa_count", label: "Wumpas", image: "/inventory-items/Wumpa_00000.png", price: 1 },
     { key: "candy_count", label: "Candy", image: "/inventory-items/Candy_00000.png", price: 18 },
     { key: "flashbang_count", label: "Flashbangs", image: "/inventory-items/Flashbang_00000.png", price: 24 },
@@ -91,8 +91,7 @@ export default function UserInventoryPage({ params }: { params: { userId: string
         <div className="flex flex-col items-center gap-3 mb-6 text-center">
           <div>
             <h1 className="text-4xl sm:text-5xl font-medium tracking-[0.04em] uppercase">
-              {row ? `${row.userName} ` : ""}
-              <span className={`${profitColor} ${profitGlow}`}>{profitLabel}</span> Inventory
+              {row ? `${row.userName} ` : ""}Inventory
             </h1>
           </div>
         </div>
@@ -107,20 +106,24 @@ export default function UserInventoryPage({ params }: { params: { userId: string
 
         {!loading && !error && row && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                <div className="text-xs uppercase tracking-wide text-gray-400">Profit</div>
+                <div className={`text-2xl font-semibold mt-1 ${profitColor} ${profitGlow}`}>{profitLabel}</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
                 <div className="text-xs uppercase tracking-wide text-gray-400">Cases Opened</div>
                 <div className="text-2xl font-semibold mt-1">{row.opens}</div>
               </div>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
                 <div className="text-xs uppercase tracking-wide text-gray-400">Common</div>
                 <div className="text-2xl font-semibold mt-1 text-blue-400">{row.common}</div>
               </div>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
                 <div className="text-xs uppercase tracking-wide text-gray-400">Epic</div>
                 <div className="text-2xl font-semibold mt-1 text-purple-400">{row.epic}</div>
               </div>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
                 <div className="text-xs uppercase tracking-wide text-gray-400">Legendary</div>
                 <div className="text-2xl font-semibold mt-1 text-yellow-400">{row.legendary}</div>
               </div>

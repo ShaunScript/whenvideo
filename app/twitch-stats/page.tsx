@@ -30,7 +30,7 @@ export default function TwitchStatsPage() {
     monster_count: 2,
     nugget_count: 1,
     rocky_count: 3,
-    wings_opened: 3,
+    wings_count: 3,
     wumpa_count: 1,
     candy_count: 18,
     flashbang_count: 24,
