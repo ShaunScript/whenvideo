@@ -125,30 +125,21 @@ export default function UserInventoryPage({ params }: { params: { userId: string
               </div>
             </div>
 
-            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-              <div className="text-sm uppercase tracking-wide text-gray-400 mb-3">Items</div>
+            <div>
+              <div className="text-xl font-semibold text-gray-200 mb-6">Inventory</div>
               {inventoryItems.length === 0 ? (
                 <div className="text-gray-500">No items yet</div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 sm:gap-10 justify-items-center">
                   {inventoryItems.map((item) => (
-                    <div
-                      key={item.key}
-                      className="flex items-center gap-3 rounded-lg border border-white/10 bg-black/40 p-2 min-w-0"
-                    >
-                      <div className="h-10 w-10 flex-shrink-0 rounded-md bg-white/5 p-1">
-                        <img
-                          src={item.image}
-                          alt={item.label}
-                          className="h-full w-full object-contain"
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-[10px] uppercase tracking-wide text-gray-400 truncate">
-                          {item.label}
-                        </div>
-                        <div className="text-sm font-semibold leading-tight">{item.value}</div>
-                      </div>
+                    <div key={item.key} className="flex flex-col items-center text-center">
+                      <img
+                        src={item.image}
+                        alt={item.label}
+                        className="h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32 object-contain"
+                      />
+                      <div className="mt-3 text-sm sm:text-base font-medium text-white">{item.label}</div>
+                      <div className="text-lg sm:text-xl font-semibold text-white">{item.value}</div>
                     </div>
                   ))}
                 </div>
