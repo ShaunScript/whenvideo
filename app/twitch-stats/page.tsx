@@ -154,8 +154,9 @@ export default function TwitchStatsPage() {
         )}
 
         {!loading && !error && rows.length > 0 && (
-          <div className="overflow-x-auto rounded-lg border border-white/10">
-            <table className="w-full text-sm">
+          <>
+            <div className="overflow-x-auto rounded-lg border border-white/10">
+              <table className="w-full text-sm">
               <thead className="bg-white/5">
                 <tr>
                   <th className="px-4 py-3 text-center w-10">#</th>
@@ -210,27 +211,28 @@ export default function TwitchStatsPage() {
                   )
                 })}
               </tbody>
-            </table>
-          </div>
-          <div className="mt-4 flex items-center justify-center gap-4">
-            <button
-              className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white hover:bg-white/10 disabled:opacity-40"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={safePage === 1}
-            >
-              ←
-            </button>
-            <div className="text-sm text-gray-400">
-              Page {safePage} of {totalPages}
+              </table>
             </div>
-            <button
-              className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white hover:bg-white/10 disabled:opacity-40"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={safePage === totalPages}
-            >
-              →
-            </button>
-          </div>
+            <div className="mt-4 flex items-center justify-center gap-4">
+              <button
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white hover:bg-white/10 disabled:opacity-40"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+              >
+                ←
+              </button>
+              <div className="text-sm text-gray-400">
+                Page {safePage} of {totalPages}
+              </div>
+              <button
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white hover:bg-white/10 disabled:opacity-40"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+              >
+                →
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>
