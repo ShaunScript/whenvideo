@@ -131,7 +131,7 @@ export default function UserInventoryPage({ params }: { params: { userId: string
               {inventoryItems.length === 0 ? (
                 <div className="text-gray-500">No items yet</div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 sm:gap-10 justify-items-center">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-8 sm:gap-10 justify-items-center">
                   {inventoryItems.map((item) => (
                     <div key={item.key} className="flex flex-col items-center text-center">
                       <img
