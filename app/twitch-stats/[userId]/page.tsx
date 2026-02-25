@@ -43,18 +43,33 @@ export default function UserInventoryPage({ params }: { params: { userId: string
     load()
   }, [params.userId])
 
-  const inventoryEntries = Object.entries(row?.inventory ?? {})
-    .filter(([, value]) => value > 0)
-    .sort(([a], [b]) => a.localeCompare(b))
+  const inventoryConfig = [
+    { key: "boink_count", label: "Boinks", image: "/inventory-items/Boink_00000.png" },
+    { key: "cheeseburger_count", label: "Cheeseburgers", image: "/inventory-items/Burger_00000.png" },
+    { key: "happyJump_count", label: "Happy Jumps", image: "/inventory-items/SteamHappy_00000.png" },
+    { key: "kebab_count", label: "Kebabs", image: "/inventory-items/Kebab_00000.png" },
+    { key: "miku_count", label: "Mikus", image: "/inventory-items/Miku_00000.png" },
+    { key: "mikuShoots_count", label: "Miku Shoots", image: "/inventory-items/MikuShoots_00000.png" },
+    { key: "monster_count", label: "Monsters", image: "/inventory-items/Monster_00000.png" },
+    { key: "nugget_count", label: "Nuggets", image: "/inventory-items/Nugget_00000.png" },
+    { key: "rocky_count", label: "Rockys", image: "/inventory-items/Rocky_00000.png" },
+    { key: "wings_opened", label: "Wings", image: "/inventory-items/Wings_00000.png" },
+    { key: "wumpa_count", label: "Wumpas", image: "/inventory-items/Wumpa_00000.png" },
+    { key: "candy_count", label: "Candy", image: "/inventory-items/Candy_00000.png" },
+    { key: "flashbang_count", label: "Flashbangs", image: "/inventory-items/Flashbang_00000.png" },
+    { key: "timeout_count", label: "Timeouts", image: "/inventory-items/timeout_00000.png" },
+    { key: "nuke_count", label: "Nukes", image: "/inventory-items/Nuke_00000.png" },
+    { key: "taxRefund_count", label: "Tax Refunds", image: "/inventory-items/TAX_00000.png" },
+    { key: "unVip_count", label: "INVips", image: "/inventory-items/INVIP_00000.png" },
+    { key: "vip_count", label: "VIPs", image: "/inventory-items/VIP_00000.png" },
+  ]
 
-  const formatInventoryLabel = (key: string) => {
-    let label = key.replace(/_(count|opened)$/, "")
-    label = label.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    label = label.replace(/_/g, " ")
-    label = label.toLowerCase()
-    if (!label.endsWith("s")) label = `${label}s`
-    return label
-  }
+  const inventoryItems = inventoryConfig
+    .map((item) => ({
+      ...item,
+      value: row?.inventory?.[item.key] ?? 0,
+    }))
+    .filter((item) => item.value > 0)
 
   const dollars =
     (row?.common ?? 0) * POINTS_COMMON +
@@ -112,14 +127,29 @@ export default function UserInventoryPage({ params }: { params: { userId: string
 
             <div className="rounded-lg border border-white/10 bg-white/5 p-4">
               <div className="text-sm uppercase tracking-wide text-gray-400 mb-3">Items</div>
-              {inventoryEntries.length === 0 ? (
+              {inventoryItems.length === 0 ? (
                 <div className="text-gray-500">No items yet</div>
               ) : (
-                <div className="flex flex-wrap gap-2">
-                  {inventoryEntries.map(([key, value]) => (
-                    <span key={key} className="rounded-full border border-white/10 bg-black/40 px-3 py-1 text-sm">
-                      {formatInventoryLabel(key)}: {value}
-                    </span>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {inventoryItems.map((item) => (
+                    <div
+                      key={item.key}
+                      className="flex items-center gap-3 rounded-lg border border-white/10 bg-black/40 p-2 min-w-0"
+                    >
+                      <div className="h-10 w-10 flex-shrink-0 rounded-md bg-white/5 p-1">
+                        <img
+                          src={item.image}
+                          alt={item.label}
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[10px] uppercase tracking-wide text-gray-400 truncate">
+                          {item.label}
+                        </div>
+                        <div className="text-sm font-semibold leading-tight">{item.value}</div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
