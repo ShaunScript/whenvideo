@@ -44,24 +44,24 @@ export default function UserInventoryPage({ params }: { params: { userId: string
   }, [params.userId])
 
   const inventoryConfig = [
-    { key: "boink_count", label: "Boinks", image: "/inventory-items/Boink_00000.png" },
-    { key: "cheeseburger_count", label: "Cheeseburgers", image: "/inventory-items/Burger_00000.png" },
-    { key: "happyJump_count", label: "Happy Jumps", image: "/inventory-items/SteamHappy_00000.png" },
-    { key: "kebab_count", label: "Kebabs", image: "/inventory-items/Kebab_00000.png" },
-    { key: "miku_count", label: "Mikus", image: "/inventory-items/Miku_00000.png" },
-    { key: "mikuShoots_count", label: "Miku Shoots", image: "/inventory-items/MikuShoots_00000.png" },
-    { key: "monster_count", label: "Monsters", image: "/inventory-items/Monster_00000.png" },
-    { key: "nugget_count", label: "Nuggets", image: "/inventory-items/Nugget_00000.png" },
-    { key: "rocky_count", label: "Rockys", image: "/inventory-items/Rocky_00000.png" },
-    { key: "wings_opened", label: "Wings", image: "/inventory-items/Wings_00000.png" },
-    { key: "wumpa_count", label: "Wumpas", image: "/inventory-items/Wumpa_00000.png" },
-    { key: "candy_count", label: "Candy", image: "/inventory-items/Candy_00000.png" },
-    { key: "flashbang_count", label: "Flashbangs", image: "/inventory-items/Flashbang_00000.png" },
-    { key: "timeout_count", label: "Timeouts", image: "/inventory-items/timeout_00000.png" },
-    { key: "nuke_count", label: "Nukes", image: "/inventory-items/Nuke_00000.png" },
-    { key: "taxRefund_count", label: "Tax Refunds", image: "/inventory-items/TAX_00000.png" },
-    { key: "unVip_count", label: "INVips", image: "/inventory-items/INVIP_00000.png" },
-    { key: "vip_count", label: "VIPs", image: "/inventory-items/VIP_00000.png" },
+    { key: "boink_count", label: "Boinks", image: "/inventory-items/Boink_00000.png", price: 2 },
+    { key: "cheeseburger_count", label: "Cheeseburgers", image: "/inventory-items/Burger_00000.png", price: 1 },
+    { key: "happyJump_count", label: "Happy Jumps", image: "/inventory-items/SteamHappy_00000.png", price: 2 },
+    { key: "kebab_count", label: "Kebabs", image: "/inventory-items/Kebab_00000.png", price: 2 },
+    { key: "miku_count", label: "Mikus", image: "/inventory-items/Miku_00000.png", price: 3 },
+    { key: "mikuShoots_count", label: "Miku Shoots", image: "/inventory-items/MikuShoots_00000.png", price: 14 },
+    { key: "monster_count", label: "Monsters", image: "/inventory-items/Monster_00000.png", price: 2 },
+    { key: "nugget_count", label: "Nuggets", image: "/inventory-items/Nugget_00000.png", price: 1 },
+    { key: "rocky_count", label: "Rockys", image: "/inventory-items/Rocky_00000.png", price: 3 },
+    { key: "wings_opened", label: "Wings", image: "/inventory-items/Wings_00000.png", price: 3 },
+    { key: "wumpa_count", label: "Wumpas", image: "/inventory-items/Wumpa_00000.png", price: 1 },
+    { key: "candy_count", label: "Candy", image: "/inventory-items/Candy_00000.png", price: 18 },
+    { key: "flashbang_count", label: "Flashbangs", image: "/inventory-items/Flashbang_00000.png", price: 24 },
+    { key: "timeout_count", label: "Timeouts", image: "/inventory-items/timeout_00000.png", price: 10 },
+    { key: "nuke_count", label: "Nukes", image: "/inventory-items/Nuke_00000.png", price: 66 },
+    { key: "taxRefund_count", label: "Tax Refunds", image: "/inventory-items/TAX_00000.png", price: 50 },
+    { key: "unVip_count", label: "INVips", image: "/inventory-items/INVIP_00000.png", price: 32 },
+    { key: "vip_count", label: "VIPs", image: "/inventory-items/VIP_00000.png", price: 100 },
   ]
 
   const inventoryItems = inventoryConfig
@@ -71,29 +71,29 @@ export default function UserInventoryPage({ params }: { params: { userId: string
     }))
     .filter((item) => item.value > 0)
 
-  const dollars =
-    (row?.common ?? 0) * POINTS_COMMON +
-    (row?.epic ?? 0) * POINTS_EPIC +
-    (row?.legendary ?? 0) * POINTS_LEGENDARY
+  const rewards = inventoryConfig.reduce((acc, item) => {
+    const count = row?.inventory?.[item.key] ?? 0
+    return acc + count * item.price
+  }, 0)
+  const caseCost = (row?.opens ?? 0) * 5
+  const profit = rewards - caseCost
+  const profitColor = profit >= 0 ? "text-green-400" : "text-red-400"
+  const profitGlow = profit >= 0
+    ? "drop-shadow-[0_0_12px_rgba(34,197,94,0.75)]"
+    : "drop-shadow-[0_0_12px_rgba(239,68,68,0.75)]"
 
   return (
     <div className="min-h-screen bg-black text-white">
       <SiteHeader />
 
       <div className="pt-24 px-4 max-w-5xl mx-auto">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="flex flex-col items-center gap-3 mb-6 text-center">
           <div>
-            <h1 className="text-4xl sm:text-5xl font-semibold tracking-[0.08em] uppercase">
+            <h1 className="text-4xl sm:text-5xl font-medium tracking-[0.04em] uppercase">
               {row ? `${row.userName} ` : ""}
-              <span className="text-yellow-300 drop-shadow-[0_0_12px_rgba(250,204,21,0.75)]">
-                ${dollars}
-              </span>{" "}
-              Inventory
+              <span className={`${profitColor} ${profitGlow}`}>${profit}</span> Inventory
             </h1>
           </div>
-          <a href="/twitch-stats" className="text-blue-300 hover:text-blue-200 underline underline-offset-2">
-            Back to leaderboard
-          </a>
         </div>
 
         {loading && (
