@@ -81,6 +81,7 @@ export default function UserInventoryPage({ params }: { params: { userId: string
   const profitGlow = profit >= 0
     ? "drop-shadow-[0_0_12px_rgba(34,197,94,0.75)]"
     : "drop-shadow-[0_0_12px_rgba(239,68,68,0.75)]"
+  const profitLabel = `${profit >= 0 ? "+" : "-"}$${Math.abs(profit)}`
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -91,7 +92,7 @@ export default function UserInventoryPage({ params }: { params: { userId: string
           <div>
             <h1 className="text-4xl sm:text-5xl font-medium tracking-[0.04em] uppercase">
               {row ? `${row.userName} ` : ""}
-              <span className={`${profitColor} ${profitGlow}`}>${profit}</span> Inventory
+              <span className={`${profitColor} ${profitGlow}`}>{profitLabel}</span> Inventory
             </h1>
           </div>
         </div>
