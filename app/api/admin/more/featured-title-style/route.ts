@@ -9,7 +9,11 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const body = await req.json()
-  await writeFeaturedTitleStyle({ fontFamily: body.fontFamily, fontSizePx: body.fontSizePx })
+  await writeFeaturedTitleStyle({
+    fontFamily: body.fontFamily,
+    fontSizePx: body.fontSizePx,
+    fontUrl: body.fontUrl ?? null,
+  })
   return NextResponse.json({ success: true })
 }
 

@@ -87,9 +87,11 @@ export default function Home() {
   const [tvVideos, setTvVideos] = React.useState<YouTubeVideo[] | null>(null)
   const [featuredVideo, setFeaturedVideo] = React.useState<YouTubeVideo | null>(null)
   const [featuredDescription, setFeaturedDescription] = React.useState("")
-  const [featuredTitleStyle, setFeaturedTitleStyle] = React.useState<{ fontFamily: string; fontSizePx: number } | null>(
-    null,
-  )
+  const [featuredTitleStyle, setFeaturedTitleStyle] = React.useState<{
+    fontFamily: string
+    fontSizePx: number
+    fontUrl?: string | null
+  } | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
   const [apiError, setApiError] = React.useState<string | null>(null)
   const [debugInfo, setDebugInfo] = React.useState<string | null>(null)
@@ -248,7 +250,11 @@ export default function Home() {
           const styleJson = await styleRes.json()
           const style = styleJson?.data
           if (style?.fontFamily && style?.fontSizePx) {
-            setFeaturedTitleStyle({ fontFamily: style.fontFamily, fontSizePx: style.fontSizePx })
+            setFeaturedTitleStyle({
+              fontFamily: style.fontFamily,
+              fontSizePx: style.fontSizePx,
+              fontUrl: style.fontUrl ?? null,
+            })
           } else {
             setFeaturedTitleStyle(null)
           }
@@ -505,8 +511,27 @@ export default function Home() {
     return <LoadingSpinner />
   }
 
+  const featuredFontFamily = featuredTitleStyle?.fontFamily
+  const featuredFontUrl = featuredTitleStyle?.fontUrl
+  const fontFaceCss = featuredFontFamily && featuredFontUrl
+    ? (() => {
+        const safeFamily = featuredFontFamily.replace(/"/g, '\\"')
+        const ext = featuredFontUrl.split(".").pop()?.toLowerCase() ?? ""
+        const format =
+          ext === "woff2" ? "woff2" : ext === "woff" ? "woff" : ext === "otf" ? "opentype" : "truetype"
+        return `
+@font-face {
+  font-family: "${safeFamily}";
+  src: url("${featuredFontUrl}") format("${format}");
+  font-display: swap;
+}
+`
+      })()
+    : ""
+
   return (
     <div className="min-h-screen bg-black text-white">
+      {fontFaceCss && <style jsx global>{fontFaceCss}</style>}
       {/* Header */}
       <header
         className={`fixed top-0 z-50 w-full ${isMobileMenuOpen ? "" : "transition-all duration-300"} ${

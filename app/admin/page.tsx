@@ -93,7 +93,17 @@ export default function AdminPanel() {
   const [isSavingFeaturedVideo, setIsSavingFeaturedVideo] = useState(false)
   const [featuredTitleFont, setFeaturedTitleFont] = useState("")
   const [featuredTitleSize, setFeaturedTitleSize] = useState("")
-  const [savedFeaturedTitleStyle, setSavedFeaturedTitleStyle] = useState<{ fontFamily: string; fontSizePx: number } | null>(null)
+  const [featuredTitleFontUrl, setFeaturedTitleFontUrl] = useState<string | null>(null)
+  const [savedFeaturedTitleStyle, setSavedFeaturedTitleStyle] = useState<{
+    fontFamily: string
+    fontSizePx: number
+    fontUrl?: string | null
+  } | null>(null)
+  const [uploadedFonts, setUploadedFonts] = useState<{ name: string; url: string; fileName: string }[]>([])
+  const [selectedFontName, setSelectedFontName] = useState("")
+  const [selectedFontUrl, setSelectedFontUrl] = useState<string | null>(null)
+  const [fontUploadFile, setFontUploadFile] = useState<File | null>(null)
+  const [isUploadingFont, setIsUploadingFont] = useState(false)
   const [isSavingFeaturedTitleStyle, setIsSavingFeaturedTitleStyle] = useState(false)
 
   // ===== Auth gate (kept) =====
@@ -379,13 +389,19 @@ export default function AdminPanel() {
       const json = await res.json()
       const data = json?.data ?? null
       if (data?.fontFamily && data?.fontSizePx) {
-        setSavedFeaturedTitleStyle({ fontFamily: data.fontFamily, fontSizePx: data.fontSizePx })
+        setSavedFeaturedTitleStyle({
+          fontFamily: data.fontFamily,
+          fontSizePx: data.fontSizePx,
+          fontUrl: data.fontUrl ?? null,
+        })
         setFeaturedTitleFont(data.fontFamily)
         setFeaturedTitleSize(String(data.fontSizePx))
+        setFeaturedTitleFontUrl(data.fontUrl ?? null)
       } else {
         setSavedFeaturedTitleStyle(null)
         setFeaturedTitleFont("")
         setFeaturedTitleSize("")
+        setFeaturedTitleFontUrl(null)
       }
     } catch (error) {
       console.error("Failed to load featured title style:", error)
@@ -409,7 +425,7 @@ export default function AdminPanel() {
       const res = await fetch("/api/admin/more/featured-title-style", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fontFamily, fontSizePx: sizeValue }),
+        body: JSON.stringify({ fontFamily, fontSizePx: sizeValue, fontUrl: featuredTitleFontUrl ?? null }),
       })
       if (!res.ok) throw new Error("Save failed")
       await loadFeaturedTitleStyle()
@@ -431,12 +447,78 @@ export default function AdminPanel() {
       setSavedFeaturedTitleStyle(null)
       setFeaturedTitleFont("")
       setFeaturedTitleSize("")
+      setFeaturedTitleFontUrl(null)
       showMessage("success", "Featured title style cleared")
     } catch (error) {
       console.error("Failed to clear featured title style:", error)
       showMessage("error", "Failed to clear featured title style")
     } finally {
       setIsSavingFeaturedTitleStyle(false)
+    }
+  }
+
+  const loadUploadedFonts = async () => {
+    try {
+      const res = await fetch("/api/admin/more/featured-fonts", { cache: "no-store" })
+      if (!res.ok) throw new Error("Failed to fetch fonts")
+      const json = await res.json()
+      setUploadedFonts(Array.isArray(json?.fonts) ? json.fonts : [])
+    } catch (error) {
+      console.error("Failed to load fonts:", error)
+      setUploadedFonts([])
+    }
+  }
+
+  const handleUploadFont = async () => {
+    if (!fontUploadFile) {
+      showMessage("error", "Choose a font file first")
+      return
+    }
+    setIsUploadingFont(true)
+    try {
+      const fd = new FormData()
+      fd.append("file", fontUploadFile)
+
+      const res = await fetch("/api/admin/more/featured-fonts", {
+        method: "POST",
+        body: fd,
+      })
+
+      const text = await res.text()
+      let json: any = null
+      try {
+        json = JSON.parse(text)
+      } catch {
+        /* ignore */
+      }
+      if (!res.ok || !json?.success) {
+        const errMsg = json?.error || `Upload failed (${res.status})`
+        throw new Error(errMsg)
+      }
+
+      setFontUploadFile(null)
+      await loadUploadedFonts()
+      showMessage("success", "Font uploaded")
+    } catch (error: any) {
+      console.error("Failed to upload font:", error)
+      showMessage("error", error?.message || "Upload failed")
+    } finally {
+      setIsUploadingFont(false)
+    }
+  }
+
+  const handleSelectFont = (value: string) => {
+    setSelectedFontName(value)
+    if (!value) {
+      setSelectedFontUrl(null)
+      setFeaturedTitleFontUrl(null)
+      return
+    }
+    const match = uploadedFonts.find((font) => font.name === value)
+    if (match) {
+      setSelectedFontUrl(match.url)
+      setFeaturedTitleFont(value)
+      setFeaturedTitleFontUrl(match.url)
     }
   }
 
@@ -447,9 +529,19 @@ export default function AdminPanel() {
       loadFeaturedDescription()
       loadFeaturedVideoOverride()
       loadFeaturedTitleStyle()
+      loadUploadedFonts()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated])
+
+  useEffect(() => {
+    if (!uploadedFonts.length || !savedFeaturedTitleStyle?.fontFamily) return
+    const match = uploadedFonts.find((font) => font.name === savedFeaturedTitleStyle.fontFamily)
+    if (match) {
+      setSelectedFontName(match.name)
+      setSelectedFontUrl(match.url)
+    }
+  }, [uploadedFonts, savedFeaturedTitleStyle])
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -681,6 +773,25 @@ export default function AdminPanel() {
     }
   }
 
+  const previewFontFamily = featuredTitleFont.trim() || savedFeaturedTitleStyle?.fontFamily || ""
+  const previewFontUrl = featuredTitleFontUrl || selectedFontUrl || savedFeaturedTitleStyle?.fontUrl || null
+  const previewFontFaceCss =
+    previewFontFamily && previewFontUrl
+      ? (() => {
+          const safeFamily = previewFontFamily.replace(/"/g, '\\"')
+          const ext = previewFontUrl.split(".").pop()?.toLowerCase() ?? ""
+          const format =
+            ext === "woff2" ? "woff2" : ext === "woff" ? "woff" : ext === "otf" ? "opentype" : "truetype"
+          return `
+@font-face {
+  font-family: "${safeFamily}";
+  src: url("${previewFontUrl}") format("${format}");
+  font-display: swap;
+}
+`
+        })()
+      : ""
+
   // ===== Auth UI (kept) =====
   if (!isAuthenticated) {
     return (
@@ -729,6 +840,7 @@ export default function AdminPanel() {
   // ===== Main Admin UI (Awards removed) =====
   return (
     <div className="min-h-screen bg-black text-white">
+      {previewFontFaceCss && <style jsx global>{previewFontFaceCss}</style>}
       <header className="border-b border-zinc-800 p-4 md:p-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -914,7 +1026,12 @@ export default function AdminPanel() {
                   <Label className="text-white">Font family</Label>
                   <Input
                     value={featuredTitleFont}
-                    onChange={(e) => setFeaturedTitleFont(e.target.value)}
+                    onChange={(e) => {
+                      setFeaturedTitleFont(e.target.value)
+                      setFeaturedTitleFontUrl(null)
+                      setSelectedFontName("")
+                      setSelectedFontUrl(null)
+                    }}
                     className="bg-black border-zinc-700 text-white"
                     placeholder='e.g. "Bebas Neue", "Oswald", "Impact"'
                   />
@@ -928,6 +1045,56 @@ export default function AdminPanel() {
                     placeholder="e.g. 64"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+                <div className="space-y-2">
+                  <Label className="text-white">Upload font file (ttf, otf, woff, woff2)</Label>
+                  <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-black px-3 py-2">
+                    <input
+                      id="featured-title-font-file"
+                      type="file"
+                      accept=".ttf,.otf,.woff,.woff2"
+                      className="hidden"
+                      onChange={(e) => setFontUploadFile(e.target.files?.[0] ?? null)}
+                    />
+                    <label
+                      htmlFor="featured-title-font-file"
+                      className="cursor-pointer rounded-md bg-zinc-700 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-600"
+                    >
+                      Choose File
+                    </label>
+                    <span className="text-sm text-gray-400 truncate">
+                      {fontUploadFile?.name ?? "No file chosen"}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleUploadFont}
+                  disabled={isUploadingFont}
+                  className="bg-zinc-700 hover:bg-zinc-600"
+                >
+                  {isUploadingFont ? "Uploading..." : "Upload Font"}
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-white">Select uploaded font</Label>
+                <select
+                  value={selectedFontName}
+                  onChange={(e) => handleSelectFont(e.target.value)}
+                  className="w-full h-10 rounded-md border border-zinc-700 bg-black px-3 text-sm text-white"
+                >
+                  <option value="">-- Select a font --</option>
+                  {uploadedFonts.map((font) => (
+                    <option key={font.fileName} value={font.name}>
+                      {font.name}
+                    </option>
+                  ))}
+                </select>
+                {selectedFontUrl && (
+                  <p className="text-xs text-gray-400">Using uploaded font: {selectedFontName}</p>
+                )}
               </div>
 
               <div className="flex gap-3">
@@ -957,6 +1124,43 @@ export default function AdminPanel() {
               ) : (
                 <p className="text-sm text-gray-400">No title style override set.</p>
               )}
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-white">Preview</h3>
+              <div className="relative overflow-hidden rounded-lg border border-zinc-800">
+                <div className="relative h-48 w-full">
+                  <Image
+                    src={featuredOverride?.thumbnailUrl || "/placeholder.svg"}
+                    alt="Featured preview"
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
+                </div>
+                <div className="absolute inset-0 flex flex-col justify-end p-4">
+                  <p
+                    className="text-white font-semibold leading-tight"
+                    style={{
+                      fontFamily: previewFontFamily || "inherit",
+                      fontSize: `${Math.min(
+                        Math.max(
+                          Number.parseInt(featuredTitleSize || "", 10) ||
+                            savedFeaturedTitleStyle?.fontSizePx ||
+                            32,
+                          18,
+                        ),
+                        64,
+                      )}px`,
+                    }}
+                  >
+                    Featured Title Preview
+                  </p>
+                  <p className="text-xs text-gray-300 mt-2">
+                    {featuredDescription || savedFeaturedDescription || "Featured description preview"}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
