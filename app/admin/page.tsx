@@ -88,6 +88,9 @@ export default function AdminPanel() {
   const [featuredDescription, setFeaturedDescription] = useState("")
   const [savedFeaturedDescription, setSavedFeaturedDescription] = useState<string | null>(null)
   const [isSavingFeaturedDescription, setIsSavingFeaturedDescription] = useState(false)
+  const [featuredVideoUrl, setFeaturedVideoUrl] = useState("")
+  const [savedFeaturedVideoId, setSavedFeaturedVideoId] = useState<string | null>(null)
+  const [isSavingFeaturedVideo, setIsSavingFeaturedVideo] = useState(false)
 
   // ===== Auth gate (kept) =====
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -310,11 +313,67 @@ export default function AdminPanel() {
     }
   }
 
+  const loadFeaturedVideoOverride = async () => {
+    try {
+      const res = await fetch("/api/admin/more/featured-video", { cache: "no-store" })
+      if (!res.ok) throw new Error("Failed to fetch featured video override")
+      const json = await res.json()
+      const data = json?.data ?? null
+      setSavedFeaturedVideoId(data?.videoId ?? null)
+    } catch (error) {
+      console.error("Failed to load featured video override:", error)
+      setSavedFeaturedVideoId(null)
+    }
+  }
+
+  const handleSaveFeaturedVideo = async () => {
+    const videoId = extractYouTubeVideoId(featuredVideoUrl)
+    if (!videoId) {
+      showMessage("error", "Enter a valid YouTube link or video ID")
+      return
+    }
+    setIsSavingFeaturedVideo(true)
+    try {
+      const res = await fetch("/api/admin/more/featured-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoId }),
+      })
+      if (!res.ok) throw new Error("Save failed")
+      setFeaturedVideoUrl("")
+      await loadFeaturedVideoOverride()
+      showMessage("success", "Featured video override saved")
+    } catch (error) {
+      console.error("Failed to save featured video override:", error)
+      showMessage("error", "Failed to save featured video override")
+    } finally {
+      setIsSavingFeaturedVideo(false)
+    }
+  }
+
+  const handleClearFeaturedVideo = async () => {
+    if (!confirm("Remove the featured video override?")) return
+    setIsSavingFeaturedVideo(true)
+    try {
+      const res = await fetch("/api/admin/more/featured-video", { method: "DELETE" })
+      if (!res.ok) throw new Error("Delete failed")
+      setSavedFeaturedVideoId(null)
+      setFeaturedVideoUrl("")
+      showMessage("success", "Featured video override cleared")
+    } catch (error) {
+      console.error("Failed to clear featured video override:", error)
+      showMessage("error", "Failed to clear featured video override")
+    } finally {
+      setIsSavingFeaturedVideo(false)
+    }
+  }
+
   useEffect(() => {
     if (isAuthenticated) {
       loadMoreVideos()
       loadFeaturedOverride()
       loadFeaturedDescription()
+      loadFeaturedVideoOverride()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated])
@@ -635,12 +694,24 @@ export default function AdminPanel() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
               <div className="space-y-2">
                 <Label className="text-white">Upload Image (jpg, png, webp)</Label>
-                <Input
-                  type="file"
-                  accept=".jpg,.jpeg,.png,.webp"
-                  className="bg-black border-zinc-700 text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-zinc-700 file:text-white hover:file:bg-zinc-600"
-                  onChange={(e) => setFeaturedThumbFile(e.target.files?.[0] ?? null)}
-                />
+                <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-black px-3 py-2">
+                  <input
+                    id="featured-thumb-file"
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp"
+                    className="hidden"
+                    onChange={(e) => setFeaturedThumbFile(e.target.files?.[0] ?? null)}
+                  />
+                  <label
+                    htmlFor="featured-thumb-file"
+                    className="cursor-pointer rounded-md bg-zinc-700 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-600"
+                  >
+                    Choose File
+                  </label>
+                  <span className="text-sm text-gray-400 truncate">
+                    {featuredThumbFile?.name ?? "No file chosen"}
+                  </span>
+                </div>
               </div>
               <div className="flex gap-3">
                 <Button
@@ -717,6 +788,47 @@ export default function AdminPanel() {
         </section>
 
         <section className="mb-12">
+          <h2 className="text-xl font-semibold mb-4">Featured Video Override</h2>
+          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800 space-y-3">
+            <div className="space-y-2">
+              <Label className="text-white">YouTube link or video ID</Label>
+              <Input
+                value={featuredVideoUrl}
+                onChange={(e) => setFeaturedVideoUrl(e.target.value)}
+                className="bg-black border-zinc-700 text-white"
+                placeholder="https://www.youtube.com/watch?v=..."
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={handleSaveFeaturedVideo}
+                disabled={isSavingFeaturedVideo}
+                className="bg-red-600 hover:bg-red-700 flex-1"
+              >
+                {isSavingFeaturedVideo ? "Saving..." : "Save Featured Video"}
+              </Button>
+              {savedFeaturedVideoId && (
+                <Button
+                  onClick={handleClearFeaturedVideo}
+                  variant="secondary"
+                  disabled={isSavingFeaturedVideo}
+                  className="flex-1"
+                >
+                  Remove Override
+                </Button>
+              )}
+            </div>
+
+            {savedFeaturedVideoId ? (
+              <p className="text-sm text-gray-300">Override active: {savedFeaturedVideoId}</p>
+            ) : (
+              <p className="text-sm text-gray-400">No override set. Homepage will use the most recent upload.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="mb-12">
           <h2 className="text-xl font-semibold mb-4">Add Video to More</h2>
           <div className="flex flex-col gap-2 mb-4">
             <textarea
@@ -762,12 +874,24 @@ export default function AdminPanel() {
 
             <div className="space-y-2">
               <Label className="text-white">Video file</Label>
-              <Input
-                type="file"
-                accept=".mp4,.webm,.mov,.m4v"
-                className="bg-black border-zinc-700 text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-zinc-700 file:text-white hover:file:bg-zinc-600"
-                onChange={(e) => setMoreUploadFile(e.target.files?.[0] ?? null)}
-              />
+              <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-black px-3 py-2">
+                <input
+                  id="more-upload-file"
+                  type="file"
+                  accept=".mp4,.webm,.mov,.m4v"
+                  className="hidden"
+                  onChange={(e) => setMoreUploadFile(e.target.files?.[0] ?? null)}
+                />
+                <label
+                  htmlFor="more-upload-file"
+                  className="cursor-pointer rounded-md bg-zinc-700 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-600"
+                >
+                  Choose File
+                </label>
+                <span className="text-sm text-gray-400 truncate">
+                  {moreUploadFile?.name ?? "No file chosen"}
+                </span>
+              </div>
             </div>
 
             <Button

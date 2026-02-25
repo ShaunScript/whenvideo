@@ -1,7 +1,14 @@
 "use server"
 
 import { getYouTubeCache, setYouTubeCache } from "@/lib/youtube-cache"
-import { fetchChannelVideos, fetchChannelVideosByHandle, filterLongVideos, fetchVideosByIds } from "@/lib/youtube-api"
+import {
+  fetchChannelVideos,
+  fetchChannelVideosByHandle,
+  fetchVideoById,
+  filterLongVideos,
+  fetchVideosByIds,
+} from "@/lib/youtube-api"
+import { readFeaturedVideo } from "@/lib/featured-video-cache"
 
 const CACHE_TTL_MS = 10 * 60 * 1000
 
@@ -29,20 +36,26 @@ async function loadFreshData(maxResults: number, moreVideoIds: string[]) {
 
   const moreVids = moreVideoIds.length > 0 ? await fetchVideosByIds(apiKey, moreVideoIds) : []
 
-  const primaryFeatured = longs[0] ?? primary.videos[0] ?? null
-  const needMoreFeatured = needMoreLongs[0] ?? needMoreData.videos[0] ?? null
-  const featuredVideo =
-    !primaryFeatured && !needMoreFeatured
-      ? null
-      : !primaryFeatured
-        ? needMoreFeatured
-        : !needMoreFeatured
-          ? primaryFeatured
-          : (() => {
-              const primaryTime = new Date(primaryFeatured.publishedAt).getTime() || 0
-              const needMoreTime = new Date(needMoreFeatured.publishedAt).getTime() || 0
-              return primaryTime >= needMoreTime ? primaryFeatured : needMoreFeatured
-            })()
+  const featuredOverride = await readFeaturedVideo()
+  let featuredVideo = featuredOverride?.videoId ? await fetchVideoById(apiKey, featuredOverride.videoId) : null
+
+  if (!featuredVideo) {
+    const primaryFeatured = longs[0] ?? primary.videos[0] ?? null
+    const needMoreFeatured = needMoreLongs[0] ?? needMoreData.videos[0] ?? null
+
+    featuredVideo =
+      !primaryFeatured && !needMoreFeatured
+        ? null
+        : !primaryFeatured
+          ? needMoreFeatured
+          : !needMoreFeatured
+            ? primaryFeatured
+            : (() => {
+                const primaryTime = new Date(primaryFeatured.publishedAt).getTime() || 0
+                const needMoreTime = new Date(needMoreFeatured.publishedAt).getTime() || 0
+                return primaryTime >= needMoreTime ? primaryFeatured : needMoreFeatured
+              })()
+  }
 
   return {
     channelData: primary,
