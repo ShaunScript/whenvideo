@@ -87,6 +87,7 @@ export default function Home() {
   const [tvVideos, setTvVideos] = React.useState<YouTubeVideo[] | null>(null)
   const [featuredVideo, setFeaturedVideo] = React.useState<YouTubeVideo | null>(null)
   const [featuredDescription, setFeaturedDescription] = React.useState("")
+  const [featuredTitleOverride, setFeaturedTitleOverride] = React.useState("")
   const [featuredTitleStyle, setFeaturedTitleStyle] = React.useState<{
     fontFamily: string
     fontSizePx: number
@@ -244,6 +245,14 @@ export default function Home() {
           setFeaturedDescription(descriptionOverride || "")
         } catch {
           setFeaturedDescription("")
+        }
+        try {
+          const titleRes = await fetch("/api/admin/more/featured-title", { cache: "no-store" })
+          const titleJson = await titleRes.json()
+          const titleOverride = titleJson?.data?.title
+          setFeaturedTitleOverride(titleOverride || "")
+        } catch {
+          setFeaturedTitleOverride("")
         }
         try {
           const styleRes = await fetch("/api/admin/more/featured-title-style", { cache: "no-store" })
@@ -513,6 +522,7 @@ export default function Home() {
 
   const featuredFontFamily = featuredTitleStyle?.fontFamily
   const featuredFontUrl = featuredTitleStyle?.fontUrl
+  const featuredTitleText = featuredTitleOverride || featuredVideo?.title || ""
   const fontFaceCss = featuredFontFamily && featuredFontUrl
     ? (() => {
         const safeFamily = featuredFontFamily.replace(/"/g, '\\"')
@@ -834,14 +844,18 @@ aria-label="Patreon"
                 <div className="absolute bottom-0 left-0 right-0 p-4 pb-5 md:p-6 md:pb-8">
                   {/* Added md:text-2xl to text size on tablet */}
                   <h1
-                    className="text-2xl md:text-3xl font-semibold mb-2.5 leading-tight text-white drop-shadow-lg"
+                    className="text-2xl md:text-3xl font-semibold mb-2.5 leading-[1.1] text-white drop-shadow-lg break-words"
                     style={
                       featuredTitleStyle
-                        ? { fontFamily: featuredTitleStyle.fontFamily, fontSize: `${featuredTitleStyle.fontSizePx}px` }
+                        ? {
+                            fontFamily: featuredTitleStyle.fontFamily,
+                            fontSize: `${featuredTitleStyle.fontSizePx}px`,
+                            lineHeight: "1.1",
+                          }
                         : undefined
                     }
                   >
-  {featuredVideo.title}
+  {featuredTitleText}
 </h1>
                   {/* Added md:text-base to text size on tablet */}
                   <p className="text-sm md:text-base text-gray-300 mb-4">
@@ -888,14 +902,18 @@ aria-label="Patreon"
                 ) : (
                   <>
                   <h1
-                    className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold mb-3 md:mb-4 leading-tight"
+                    className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold mb-3 md:mb-4 leading-[1.1] break-words max-w-[90%] sm:max-w-[85%]"
                     style={
                       featuredTitleStyle
-                        ? { fontFamily: featuredTitleStyle.fontFamily, fontSize: `${featuredTitleStyle.fontSizePx}px` }
+                        ? {
+                            fontFamily: featuredTitleStyle.fontFamily,
+                            fontSize: `${featuredTitleStyle.fontSizePx}px`,
+                            lineHeight: "1.1",
+                          }
                         : undefined
                     }
                   >
-  {featuredVideo.title}
+  {featuredTitleText}
 </h1>
 
                     <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-4 md:mb-6 text-gray-300">

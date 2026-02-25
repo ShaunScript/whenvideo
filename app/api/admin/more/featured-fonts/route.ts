@@ -4,7 +4,7 @@ import fs from "fs/promises"
 
 export const runtime = "nodejs"
 
-const ALLOWED_EXTENSIONS = [".ttf", ".otf", ".woff", ".woff2"]
+const ALLOWED_EXTENSIONS = [".ttf", ".otf", ".oft", ".woff", ".woff2"]
 const MAX_BYTES = 15 * 1024 * 1024
 
 const FONT_DIR = path.join(process.cwd(), "public", "featured-fonts")

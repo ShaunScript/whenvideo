@@ -73,11 +73,6 @@ export default function AdminPanel() {
   const [videoUrl, setVideoUrl] = useState("")
   const [isAdding, setIsAdding] = useState(false)
 
-  const [moreUploadFile, setMoreUploadFile] = useState<File | null>(null)
-  const [moreUploadTitle, setMoreUploadTitle] = useState("")
-  const [moreUploadChannel, setMoreUploadChannel] = useState("")
-  const [isUploadingMore, setIsUploadingMore] = useState(false)
-
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [featuredOverride, setFeaturedOverride] = useState<{ thumbnailUrl: string } | null>(null)
@@ -94,6 +89,9 @@ export default function AdminPanel() {
   const [featuredTitleFont, setFeaturedTitleFont] = useState("")
   const [featuredTitleSize, setFeaturedTitleSize] = useState("")
   const [featuredTitleFontUrl, setFeaturedTitleFontUrl] = useState<string | null>(null)
+  const [featuredTitleOverride, setFeaturedTitleOverride] = useState("")
+  const [savedFeaturedTitleOverride, setSavedFeaturedTitleOverride] = useState<string | null>(null)
+  const [isSavingFeaturedTitleOverride, setIsSavingFeaturedTitleOverride] = useState(false)
   const [savedFeaturedTitleStyle, setSavedFeaturedTitleStyle] = useState<{
     fontFamily: string
     fontSizePx: number
@@ -409,6 +407,62 @@ export default function AdminPanel() {
     }
   }
 
+  const loadFeaturedTitleOverride = async () => {
+    try {
+      const res = await fetch("/api/admin/more/featured-title", { cache: "no-store" })
+      if (!res.ok) throw new Error("Failed to fetch featured title override")
+      const json = await res.json()
+      const data = json?.data ?? null
+      setSavedFeaturedTitleOverride(data?.title ?? null)
+      setFeaturedTitleOverride(data?.title ?? "")
+    } catch (error) {
+      console.error("Failed to load featured title override:", error)
+      setSavedFeaturedTitleOverride(null)
+      setFeaturedTitleOverride("")
+    }
+  }
+
+  const handleSaveFeaturedTitleOverride = async () => {
+    const title = featuredTitleOverride.trim()
+    if (!title) {
+      showMessage("error", "Enter a featured title first")
+      return
+    }
+    setIsSavingFeaturedTitleOverride(true)
+    try {
+      const res = await fetch("/api/admin/more/featured-title", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      })
+      if (!res.ok) throw new Error("Save failed")
+      await loadFeaturedTitleOverride()
+      showMessage("success", "Featured title updated")
+    } catch (error) {
+      console.error("Failed to save featured title override:", error)
+      showMessage("error", "Failed to save featured title override")
+    } finally {
+      setIsSavingFeaturedTitleOverride(false)
+    }
+  }
+
+  const handleClearFeaturedTitleOverride = async () => {
+    if (!confirm("Remove the featured title override?")) return
+    setIsSavingFeaturedTitleOverride(true)
+    try {
+      const res = await fetch("/api/admin/more/featured-title", { method: "DELETE" })
+      if (!res.ok) throw new Error("Delete failed")
+      setSavedFeaturedTitleOverride(null)
+      setFeaturedTitleOverride("")
+      showMessage("success", "Featured title override cleared")
+    } catch (error) {
+      console.error("Failed to clear featured title override:", error)
+      showMessage("error", "Failed to clear featured title override")
+    } finally {
+      setIsSavingFeaturedTitleOverride(false)
+    }
+  }
+
   const handleSaveFeaturedTitleStyle = async () => {
     const fontFamily = featuredTitleFont.trim()
     const sizeValue = Number.parseInt(featuredTitleSize, 10)
@@ -529,6 +583,7 @@ export default function AdminPanel() {
       loadFeaturedDescription()
       loadFeaturedVideoOverride()
       loadFeaturedTitleStyle()
+      loadFeaturedTitleOverride()
       loadUploadedFonts()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -647,94 +702,6 @@ export default function AdminPanel() {
       showMessage("error", error instanceof Error ? error.message : "Failed to add video")
     } finally {
       setIsAdding(false)
-    }
-  }
-
-  /* ===========================
-     MANUAL UPLOAD → MORE (kept)
-     =========================== */
-  const handleUploadToMore = async () => {
-    if (!moreUploadFile) return
-
-    if (!moreUploadTitle.trim() || !moreUploadChannel.trim()) {
-      showMessage("error", "Please enter a title and channel name.")
-      return
-    }
-
-    setIsUploadingMore(true)
-    try {
-      // 1) Upload file
-      const fd = new FormData()
-      fd.append("file", moreUploadFile)
-
-      const uploadRes = await fetch("/api/admin/more/upload", {
-        method: "POST",
-        body: fd,
-      })
-
-      const uploadText = await uploadRes.text()
-      const uploadData = (() => {
-        try {
-          return JSON.parse(uploadText)
-        } catch {
-          return null
-        }
-      })()
-
-      if (!uploadRes.ok || !uploadData?.success) {
-        showMessage("error", uploadData?.error || `Upload failed (${uploadRes.status})`)
-        return
-      }
-
-      // 2) Add uploaded video to More
-      const now = new Date().toISOString()
-      const uploadId = `upload-${Date.now()}`
-
-      const addRes = await fetch("/api/admin/more", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          video: {
-            id: uploadId,
-            title: moreUploadTitle.trim(),
-            channelName: moreUploadChannel.trim(),
-            thumbnail: "/placeholder.svg",
-            description: "",
-            publishedAt: now,
-            viewCount: "0",
-            commentCount: 0,
-            duration: "",
-            addedAt: now,
-            source: "upload",
-            videoUrl: uploadData.url,
-          },
-        }),
-      })
-
-      const addText = await addRes.text()
-      const addData = (() => {
-        try {
-          return JSON.parse(addText)
-        } catch {
-          return null
-        }
-      })()
-
-      if (!addRes.ok) {
-        showMessage("error", addData?.error || addData?.message || "Failed to save uploaded video")
-        return
-      }
-
-      showMessage("success", "Uploaded and added to More!")
-      setMoreUploadFile(null)
-      setMoreUploadTitle("")
-      setMoreUploadChannel("")
-      await loadMoreVideos()
-    } catch (err: any) {
-      console.error("[handleUploadToMore] error:", err)
-      showMessage("error", err?.message || "Upload failed")
-    } finally {
-      setIsUploadingMore(false)
     }
   }
 
@@ -1049,12 +1016,12 @@ export default function AdminPanel() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
                 <div className="space-y-2">
-                  <Label className="text-white">Upload font file (ttf, otf, woff, woff2)</Label>
+                  <Label className="text-white">Upload font file (ttf, otf, oft, woff, woff2)</Label>
                   <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-black px-3 py-2">
                     <input
                       id="featured-title-font-file"
                       type="file"
-                      accept=".ttf,.otf,.woff,.woff2"
+                      accept=".ttf,.otf,.oft,.woff,.woff2"
                       className="hidden"
                       onChange={(e) => setFontUploadFile(e.target.files?.[0] ?? null)}
                     />
@@ -1127,6 +1094,45 @@ export default function AdminPanel() {
             </div>
 
             <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-white">Featured Title Override</h3>
+              <div className="space-y-2">
+                <Label className="text-white">Title text</Label>
+                <Input
+                  value={featuredTitleOverride}
+                  onChange={(e) => setFeaturedTitleOverride(e.target.value)}
+                  className="bg-black border-zinc-700 text-white"
+                  placeholder="Featured video title override..."
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleSaveFeaturedTitleOverride}
+                  disabled={isSavingFeaturedTitleOverride}
+                  className="bg-red-600 hover:bg-red-700 flex-1"
+                >
+                  {isSavingFeaturedTitleOverride ? "Saving..." : "Save Title"}
+                </Button>
+                {savedFeaturedTitleOverride && (
+                  <Button
+                    onClick={handleClearFeaturedTitleOverride}
+                    variant="secondary"
+                    disabled={isSavingFeaturedTitleOverride}
+                    className="flex-1"
+                  >
+                    Remove Override
+                  </Button>
+                )}
+              </div>
+
+              {savedFeaturedTitleOverride ? (
+                <p className="text-sm text-gray-300">Current override is live on the homepage hero.</p>
+              ) : (
+                <p className="text-sm text-gray-400">No override set. Default title will be used.</p>
+              )}
+            </div>
+
+            <div className="space-y-3">
               <h3 className="text-sm font-semibold text-white">Preview</h3>
               <div className="relative overflow-hidden rounded-lg border border-zinc-800">
                 <div className="relative h-48 w-full">
@@ -1140,7 +1146,7 @@ export default function AdminPanel() {
                 </div>
                 <div className="absolute inset-0 flex flex-col justify-end p-4">
                   <p
-                    className="text-white font-semibold leading-tight"
+                    className="text-white font-semibold leading-[1.1] break-words"
                     style={{
                       fontFamily: previewFontFamily || "inherit",
                       fontSize: `${Math.min(
@@ -1152,9 +1158,10 @@ export default function AdminPanel() {
                         ),
                         64,
                       )}px`,
+                      lineHeight: "1.1",
                     }}
                   >
-                    Featured Title Preview
+                    {featuredTitleOverride || savedFeaturedTitleOverride || "Featured Title Preview"}
                   </p>
                   <p className="text-xs text-gray-300 mt-2">
                     {featuredDescription || savedFeaturedDescription || "Featured description preview"}
@@ -1181,68 +1188,6 @@ export default function AdminPanel() {
             </Button>
           </div>
           <p className="text-sm text-gray-400">Paste YouTube URLs (one per line). Supports full URLs or video IDs.</p>
-        </section>
-
-        <section className="mb-12">
-          <h2 className="text-xl font-semibold mb-4">Manual Upload to More</h2>
-
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label className="text-white">Title</Label>
-                <Input
-                  value={moreUploadTitle}
-                  onChange={(e) => setMoreUploadTitle(e.target.value)}
-                  className="bg-black border-zinc-700 text-white"
-                  placeholder="Video title"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-white">Channel Name</Label>
-                <Input
-                  value={moreUploadChannel}
-                  onChange={(e) => setMoreUploadChannel(e.target.value)}
-                  className="bg-black border-zinc-700 text-white"
-                  placeholder="Channel / uploader name"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-white">Video file</Label>
-              <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-black px-3 py-2">
-                <input
-                  id="more-upload-file"
-                  type="file"
-                  accept=".mp4,.webm,.mov,.m4v"
-                  className="hidden"
-                  onChange={(e) => setMoreUploadFile(e.target.files?.[0] ?? null)}
-                />
-                <label
-                  htmlFor="more-upload-file"
-                  className="cursor-pointer rounded-md bg-zinc-700 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-600"
-                >
-                  Choose File
-                </label>
-                <span className="text-sm text-gray-400 truncate">
-                  {moreUploadFile?.name ?? "No file chosen"}
-                </span>
-              </div>
-            </div>
-
-            <Button
-              onClick={handleUploadToMore}
-              disabled={!moreUploadFile || isUploadingMore}
-              className="w-full bg-red-600 hover:bg-red-700"
-            >
-              {isUploadingMore ? "Uploading..." : "Upload & Add to More"}
-            </Button>
-
-            <p className="text-xs text-gray-400">
-              Saves the file into <code>public/more-uploads</code> and adds it to More.
-            </p>
-          </div>
         </section>
 
         <section>
