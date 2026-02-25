@@ -86,6 +86,7 @@ export default function Home() {
   const [longVideos, setLongVideos] = React.useState<YouTubeVideo[] | null>(null)
   const [tvVideos, setTvVideos] = React.useState<YouTubeVideo[] | null>(null)
   const [featuredVideo, setFeaturedVideo] = React.useState<YouTubeVideo | null>(null)
+  const [featuredDescription, setFeaturedDescription] = React.useState("")
   const [isLoading, setIsLoading] = React.useState(true)
   const [apiError, setApiError] = React.useState<string | null>(null)
   const [debugInfo, setDebugInfo] = React.useState<string | null>(null)
@@ -104,6 +105,8 @@ export default function Home() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
   const [isCompactMode, setIsCompactMode] = React.useState(false)
   const [activeMobileNav, setActiveMobileNav] = React.useState("home")
+  const defaultFeaturedDescription =
+    "Really cool and awesome video, you should watch it, even if you already watched it, yes"
 
   const searchInputCallbackRef = React.useCallback((node: HTMLInputElement | null) => {
     if (node) {
@@ -229,6 +232,14 @@ export default function Home() {
             setFeaturedVideo({ ...result.featuredVideo, thumbnail: override.thumbnailUrl })
           }
         } catch {}
+        try {
+          const descriptionRes = await fetch("/api/admin/more/featured-description", { cache: "no-store" })
+          const descriptionJson = await descriptionRes.json()
+          const descriptionOverride = descriptionJson?.data?.description
+          setFeaturedDescription(descriptionOverride || "")
+        } catch {
+          setFeaturedDescription("")
+        }
         setApiError(null)
 
         const convertedMoreVideos: YouTubeVideo[] = moreVideosFromStorage.map((video) => ({
@@ -782,12 +793,12 @@ aria-label="Patreon"
                 {/* Content below image - inside card */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 pb-5 md:p-6 md:pb-8">
                   {/* Added md:text-2xl to text size on tablet */}
-                  <h1 className="text-xl md:text-2xl font-semibold mb-2.5 leading-tight text-white drop-shadow-lg">
+                  <h1 className="text-2xl md:text-3xl font-semibold mb-2.5 leading-tight text-white drop-shadow-lg">
   {featuredVideo.title}
 </h1>
                   {/* Added md:text-base to text size on tablet */}
                   <p className="text-sm md:text-base text-gray-300 mb-4">
-                    Really cool and awesome video, you should watch it
+                    {featuredDescription || defaultFeaturedDescription}
                   </p>
 
                   {/* Buttons */}
@@ -829,12 +840,12 @@ aria-label="Patreon"
                   </>
                 ) : (
                   <>
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold mb-3 md:mb-4 leading-tight">
+                  <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold mb-3 md:mb-4 leading-tight">
   {featuredVideo.title}
 </h1>
 
                     <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-4 md:mb-6 text-gray-300">
-                      Really cool and awesome video, you should watch it, even if you already watched it, yes
+                      {featuredDescription || defaultFeaturedDescription}
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                       <Button

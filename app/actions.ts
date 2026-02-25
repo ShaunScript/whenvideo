@@ -1,7 +1,7 @@
 "use server"
 
 import { getYouTubeCache, setYouTubeCache } from "@/lib/youtube-cache"
-import { fetchChannelVideos, filterLongVideos, fetchVideosByIds } from "@/lib/youtube-api"
+import { fetchChannelVideos, fetchChannelVideosByHandle, filterLongVideos, fetchVideosByIds } from "@/lib/youtube-api"
 
 const CACHE_TTL_MS = 10 * 60 * 1000
 
@@ -24,14 +24,32 @@ async function loadFreshData(maxResults: number, moreVideoIds: string[]) {
   const tvData = await fetchChannelVideos(apiKey, maxResults, tvChannelId)
   const tvVideos = filterLongVideos(tvData.videos)
 
+  const needMoreData = await fetchChannelVideosByHandle(apiKey, "needmoredoza", maxResults)
+  const needMoreLongs = filterLongVideos(needMoreData.videos)
+
   const moreVids = moreVideoIds.length > 0 ? await fetchVideosByIds(apiKey, moreVideoIds) : []
+
+  const primaryFeatured = longs[0] ?? primary.videos[0] ?? null
+  const needMoreFeatured = needMoreLongs[0] ?? needMoreData.videos[0] ?? null
+  const featuredVideo =
+    !primaryFeatured && !needMoreFeatured
+      ? null
+      : !primaryFeatured
+        ? needMoreFeatured
+        : !needMoreFeatured
+          ? primaryFeatured
+          : (() => {
+              const primaryTime = new Date(primaryFeatured.publishedAt).getTime() || 0
+              const needMoreTime = new Date(needMoreFeatured.publishedAt).getTime() || 0
+              return primaryTime >= needMoreTime ? primaryFeatured : needMoreFeatured
+            })()
 
   return {
     channelData: primary,
     longVideos: longs,
     tvVideos,
     moreVideos: moreVids,
-    featuredVideo: longs.length > 0 ? longs[0] : primary.videos.length > 0 ? primary.videos[0] : null,
+    featuredVideo,
   }
 }
 

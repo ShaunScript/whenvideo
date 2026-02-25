@@ -80,13 +80,14 @@ export default function AdminPanel() {
 
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [gameHighScore, setGameHighScore] = useState<{ score: number; name: string } | null>(null)
-  const [newHighScoreName, setNewHighScoreName] = useState("")
   const [featuredOverride, setFeaturedOverride] = useState<{ thumbnailUrl: string } | null>(null)
   const [featuredThumbUrl, setFeaturedThumbUrl] = useState("")
   const [isSavingFeatured, setIsSavingFeatured] = useState(false)
   const [featuredThumbFile, setFeaturedThumbFile] = useState<File | null>(null)
   const [isUploadingFeatured, setIsUploadingFeatured] = useState(false)
+  const [featuredDescription, setFeaturedDescription] = useState("")
+  const [savedFeaturedDescription, setSavedFeaturedDescription] = useState<string | null>(null)
+  const [isSavingFeaturedDescription, setIsSavingFeaturedDescription] = useState(false)
 
   // ===== Auth gate (kept) =====
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -152,54 +153,6 @@ export default function AdminPanel() {
     }
     setIsLoading(false)
     return 0
-  }
-
-  const loadGameHighScore = async () => {
-    try {
-      const res = await fetch("/api/game/highscore", { cache: "no-store" })
-      if (!res.ok) throw new Error("Failed to fetch high score")
-      const json = await res.json()
-      setGameHighScore(json?.data ?? null)
-      setNewHighScoreName(json?.data?.name ?? "")
-    } catch (error) {
-      console.error("Failed to load game high score:", error)
-      showMessage("error", "Could not load game high score")
-    }
-  }
-
-  const handleResetGameHighScore = async () => {
-    if (!confirm("Delete the stored high score and name?")) return
-    try {
-      const res = await fetch("/api/game/highscore", { method: "DELETE" })
-      if (!res.ok) throw new Error("Delete failed")
-      setGameHighScore(null)
-      setNewHighScoreName("")
-      showMessage("success", "High score deleted")
-    } catch (error) {
-      console.error("Failed to delete high score:", error)
-      showMessage("error", "Failed to delete high score")
-    }
-  }
-
-  const handleRenameHighScore = async () => {
-    const name = newHighScoreName.trim()
-    if (!name) {
-      showMessage("error", "Enter a name first")
-      return
-    }
-    try {
-      const res = await fetch("/api/game/highscore", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      })
-      if (!res.ok) throw new Error("Rename failed")
-      await loadGameHighScore()
-      showMessage("success", "High score name updated")
-    } catch (error) {
-      console.error("Failed to rename high score:", error)
-      showMessage("error", "Failed to rename high score")
-    }
   }
 
   const loadFeaturedOverride = async () => {
@@ -301,11 +254,67 @@ export default function AdminPanel() {
     }
   }
 
+  const loadFeaturedDescription = async () => {
+    try {
+      const res = await fetch("/api/admin/more/featured-description", { cache: "no-store" })
+      if (!res.ok) throw new Error("Failed to fetch featured description")
+      const json = await res.json()
+      const data = json?.data ?? null
+      setSavedFeaturedDescription(data?.description ?? null)
+      setFeaturedDescription(data?.description ?? "")
+    } catch (error) {
+      console.error("Failed to load featured description:", error)
+      setSavedFeaturedDescription(null)
+      setFeaturedDescription("")
+    }
+  }
+
+  const handleSaveFeaturedDescription = async () => {
+    const description = featuredDescription.trim()
+    if (!description) {
+      showMessage("error", "Enter a featured description first")
+      return
+    }
+    setIsSavingFeaturedDescription(true)
+    try {
+      const res = await fetch("/api/admin/more/featured-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description }),
+      })
+      if (!res.ok) throw new Error("Save failed")
+      await loadFeaturedDescription()
+      showMessage("success", "Featured description updated")
+    } catch (error) {
+      console.error("Failed to save featured description:", error)
+      showMessage("error", "Failed to save featured description")
+    } finally {
+      setIsSavingFeaturedDescription(false)
+    }
+  }
+
+  const handleClearFeaturedDescription = async () => {
+    if (!confirm("Remove the custom featured description?")) return
+    setIsSavingFeaturedDescription(true)
+    try {
+      const res = await fetch("/api/admin/more/featured-description", { method: "DELETE" })
+      if (!res.ok) throw new Error("Delete failed")
+      setSavedFeaturedDescription(null)
+      setFeaturedDescription("")
+      showMessage("success", "Featured description cleared")
+    } catch (error) {
+      console.error("Failed to clear featured description:", error)
+      showMessage("error", "Failed to clear featured description")
+    } finally {
+      setIsSavingFeaturedDescription(false)
+    }
+  }
+
   useEffect(() => {
     if (isAuthenticated) {
       loadMoreVideos()
-      loadGameHighScore()
       loadFeaturedOverride()
+      loadFeaturedDescription()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated])
@@ -611,41 +620,6 @@ export default function AdminPanel() {
         )}
 
         <section className="mb-12">
-          <h2 className="text-xl font-semibold mb-4">Game High Score</h2>
-          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
-            {gameHighScore ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-gray-400 text-sm mb-1">Current High Score</p>
-                    <p className="text-2xl font-bold">{gameHighScore.score}</p>
-                    <p className="text-gray-400 mt-1">by {gameHighScore.name}</p>
-                  </div>
-                  <Button onClick={handleResetGameHighScore} variant="destructive">
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
-                  <Input
-                    value={newHighScoreName}
-                    onChange={(e) => setNewHighScoreName(e.target.value)}
-                    placeholder="Rename high score holder"
-                    className="bg-black border-zinc-700 text-white"
-                  />
-                  <Button onClick={handleRenameHighScore} className="bg-red-600 hover:bg-red-700">
-                    Save Name
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <p className="text-gray-400 text-center">No high score set yet</p>
-            )}
-          </div>
-        </section>
-
-        <section className="mb-12">
           <h2 className="text-xl font-semibold mb-4">Featured Thumbnail Override</h2>
           <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800 space-y-3">
             <div className="space-y-2">
@@ -664,7 +638,7 @@ export default function AdminPanel() {
                 <Input
                   type="file"
                   accept=".jpg,.jpeg,.png,.webp"
-                  className="bg-black border-zinc-700 text-white"
+                  className="bg-black border-zinc-700 text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-zinc-700 file:text-white hover:file:bg-zinc-600"
                   onChange={(e) => setFeaturedThumbFile(e.target.files?.[0] ?? null)}
                 />
               </div>
@@ -696,6 +670,48 @@ export default function AdminPanel() {
               </div>
             ) : (
               <p className="text-sm text-gray-400">No override set. Upload an image to replace the homepage hero.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="mb-12">
+          <h2 className="text-xl font-semibold mb-4">Featured Description Override</h2>
+          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800 space-y-3">
+            <div className="space-y-2">
+              <Label className="text-white">Description text</Label>
+              <textarea
+                value={featuredDescription}
+                onChange={(e) => setFeaturedDescription(e.target.value)}
+                rows={4}
+                className="w-full bg-black border border-zinc-700 text-white rounded-md p-3 resize-none focus:outline-none focus:ring-2 focus:ring-red-600"
+                placeholder="Featured description shown on the homepage hero..."
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={handleSaveFeaturedDescription}
+                disabled={isSavingFeaturedDescription}
+                className="bg-red-600 hover:bg-red-700 flex-1"
+              >
+                {isSavingFeaturedDescription ? "Saving..." : "Save Description"}
+              </Button>
+              {savedFeaturedDescription && (
+                <Button
+                  onClick={handleClearFeaturedDescription}
+                  variant="secondary"
+                  disabled={isSavingFeaturedDescription}
+                  className="flex-1"
+                >
+                  Remove Override
+                </Button>
+              )}
+            </div>
+
+            {savedFeaturedDescription ? (
+              <p className="text-sm text-gray-300">Current override is live on the homepage hero.</p>
+            ) : (
+              <p className="text-sm text-gray-400">No override set. Default hero description will be used.</p>
             )}
           </div>
         </section>
@@ -749,7 +765,7 @@ export default function AdminPanel() {
               <Input
                 type="file"
                 accept=".mp4,.webm,.mov,.m4v"
-                className="bg-black border-zinc-700 text-white"
+                className="bg-black border-zinc-700 text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-zinc-700 file:text-white hover:file:bg-zinc-600"
                 onChange={(e) => setMoreUploadFile(e.target.files?.[0] ?? null)}
               />
             </div>

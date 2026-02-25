@@ -24,6 +24,7 @@ export default function GamePage() {
     pipes: [] as { x: number; gapY: number; scored?: boolean }[],
     score: 0,
     animationId: 0,
+    lastTime: 0,
   })
 
   const loadHighScore = React.useCallback(async () => {
@@ -115,11 +116,11 @@ export default function GamePage() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    const GRAVITY = 0.15
-    const JUMP_STRENGTH = -5
+    const GRAVITY = 540
+    const JUMP_STRENGTH = -300
     const PIPE_WIDTH = 50
     const PIPE_GAP = 180
-    const PIPE_SPEED = 2
+    const PIPE_SPEED = 120
     const BIRD_SIZE = 30
     const PIPE_SPACING = 350
 
@@ -134,6 +135,7 @@ export default function GamePage() {
         ],
         score: 0,
         animationId: 0,
+        lastTime: performance.now(),
       }
       setScore(0)
       setGameOver(false)
@@ -166,8 +168,13 @@ export default function GamePage() {
       jump()
     }
 
-    const gameLoop = () => {
+    const gameLoop = (timestamp: number) => {
       if (!ctx || !canvas) return
+
+      const lastTime = gameStateRef.current.lastTime || timestamp
+      const deltaMs = Math.min(50, Math.max(0, timestamp - lastTime))
+      const dt = deltaMs / 1000
+      gameStateRef.current.lastTime = timestamp
 
       ctx.fillStyle = "#0a0a0a"
       ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -176,8 +183,8 @@ export default function GamePage() {
       const pipes = gameStateRef.current.pipes
 
       if (gameStarted && !gameOver) {
-        bird.velocity += GRAVITY
-        bird.y += bird.velocity
+        bird.velocity += GRAVITY * dt
+        bird.y += bird.velocity * dt
 
         const lastPipe = pipes[pipes.length - 1]
         if (lastPipe && lastPipe.x < canvas.width - PIPE_SPACING) {
@@ -187,7 +194,7 @@ export default function GamePage() {
 
         for (let i = pipes.length - 1; i >= 0; i--) {
           const pipe = pipes[i]
-          pipe.x -= PIPE_SPEED
+          pipe.x -= PIPE_SPEED * dt
 
           const birdLeft = 100 - BIRD_SIZE / 2
           const birdRight = 100 + BIRD_SIZE / 2
