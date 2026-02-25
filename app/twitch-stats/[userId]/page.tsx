@@ -81,10 +81,14 @@ export default function UserInventoryPage({ params }: { params: { userId: string
       <SiteHeader />
 
       <div className="pt-24 px-4 max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">
-              {row ? `${row.userName} Inventory:` : "Inventory"}
+            <h1 className="text-4xl sm:text-5xl font-semibold tracking-[0.08em] uppercase">
+              {row ? `${row.userName} ` : ""}
+              <span className="text-yellow-300 drop-shadow-[0_0_12px_rgba(250,204,21,0.75)]">
+                ${dollars}
+              </span>{" "}
+              Inventory
             </h1>
           </div>
           <a href="/twitch-stats" className="text-blue-300 hover:text-blue-200 underline underline-offset-2">
@@ -103,10 +107,6 @@ export default function UserInventoryPage({ params }: { params: { userId: string
         {!loading && !error && row && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-wide text-gray-400">Cash</div>
-                <div className="text-2xl font-semibold mt-1">${dollars}</div>
-              </div>
               <div className="rounded-lg border border-white/10 bg-white/5 p-4">
                 <div className="text-xs uppercase tracking-wide text-gray-400">Cases Opened</div>
                 <div className="text-2xl font-semibold mt-1">{row.opens}</div>
