@@ -87,6 +87,9 @@ export default function Home() {
   const [tvVideos, setTvVideos] = React.useState<YouTubeVideo[] | null>(null)
   const [featuredVideo, setFeaturedVideo] = React.useState<YouTubeVideo | null>(null)
   const [featuredDescription, setFeaturedDescription] = React.useState("")
+  const [featuredTitleStyle, setFeaturedTitleStyle] = React.useState<{ fontFamily: string; fontSizePx: number } | null>(
+    null,
+  )
   const [isLoading, setIsLoading] = React.useState(true)
   const [apiError, setApiError] = React.useState<string | null>(null)
   const [debugInfo, setDebugInfo] = React.useState<string | null>(null)
@@ -239,6 +242,18 @@ export default function Home() {
           setFeaturedDescription(descriptionOverride || "")
         } catch {
           setFeaturedDescription("")
+        }
+        try {
+          const styleRes = await fetch("/api/admin/more/featured-title-style", { cache: "no-store" })
+          const styleJson = await styleRes.json()
+          const style = styleJson?.data
+          if (style?.fontFamily && style?.fontSizePx) {
+            setFeaturedTitleStyle({ fontFamily: style.fontFamily, fontSizePx: style.fontSizePx })
+          } else {
+            setFeaturedTitleStyle(null)
+          }
+        } catch {
+          setFeaturedTitleStyle(null)
         }
         setApiError(null)
 
@@ -793,7 +808,14 @@ aria-label="Patreon"
                 {/* Content below image - inside card */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 pb-5 md:p-6 md:pb-8">
                   {/* Added md:text-2xl to text size on tablet */}
-                  <h1 className="text-2xl md:text-3xl font-semibold mb-2.5 leading-tight text-white drop-shadow-lg">
+                  <h1
+                    className="text-2xl md:text-3xl font-semibold mb-2.5 leading-tight text-white drop-shadow-lg"
+                    style={
+                      featuredTitleStyle
+                        ? { fontFamily: featuredTitleStyle.fontFamily, fontSize: `${featuredTitleStyle.fontSizePx}px` }
+                        : undefined
+                    }
+                  >
   {featuredVideo.title}
 </h1>
                   {/* Added md:text-base to text size on tablet */}
@@ -840,7 +862,14 @@ aria-label="Patreon"
                   </>
                 ) : (
                   <>
-                  <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold mb-3 md:mb-4 leading-tight">
+                  <h1
+                    className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold mb-3 md:mb-4 leading-tight"
+                    style={
+                      featuredTitleStyle
+                        ? { fontFamily: featuredTitleStyle.fontFamily, fontSize: `${featuredTitleStyle.fontSizePx}px` }
+                        : undefined
+                    }
+                  >
   {featuredVideo.title}
 </h1>
 

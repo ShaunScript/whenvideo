@@ -91,6 +91,10 @@ export default function AdminPanel() {
   const [featuredVideoUrl, setFeaturedVideoUrl] = useState("")
   const [savedFeaturedVideoId, setSavedFeaturedVideoId] = useState<string | null>(null)
   const [isSavingFeaturedVideo, setIsSavingFeaturedVideo] = useState(false)
+  const [featuredTitleFont, setFeaturedTitleFont] = useState("")
+  const [featuredTitleSize, setFeaturedTitleSize] = useState("")
+  const [savedFeaturedTitleStyle, setSavedFeaturedTitleStyle] = useState<{ fontFamily: string; fontSizePx: number } | null>(null)
+  const [isSavingFeaturedTitleStyle, setIsSavingFeaturedTitleStyle] = useState(false)
 
   // ===== Auth gate (kept) =====
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -368,12 +372,81 @@ export default function AdminPanel() {
     }
   }
 
+  const loadFeaturedTitleStyle = async () => {
+    try {
+      const res = await fetch("/api/admin/more/featured-title-style", { cache: "no-store" })
+      if (!res.ok) throw new Error("Failed to fetch featured title style")
+      const json = await res.json()
+      const data = json?.data ?? null
+      if (data?.fontFamily && data?.fontSizePx) {
+        setSavedFeaturedTitleStyle({ fontFamily: data.fontFamily, fontSizePx: data.fontSizePx })
+        setFeaturedTitleFont(data.fontFamily)
+        setFeaturedTitleSize(String(data.fontSizePx))
+      } else {
+        setSavedFeaturedTitleStyle(null)
+        setFeaturedTitleFont("")
+        setFeaturedTitleSize("")
+      }
+    } catch (error) {
+      console.error("Failed to load featured title style:", error)
+      setSavedFeaturedTitleStyle(null)
+    }
+  }
+
+  const handleSaveFeaturedTitleStyle = async () => {
+    const fontFamily = featuredTitleFont.trim()
+    const sizeValue = Number.parseInt(featuredTitleSize, 10)
+    if (!fontFamily) {
+      showMessage("error", "Enter a font family")
+      return
+    }
+    if (!Number.isFinite(sizeValue) || sizeValue < 12 || sizeValue > 200) {
+      showMessage("error", "Enter a font size between 12 and 200")
+      return
+    }
+    setIsSavingFeaturedTitleStyle(true)
+    try {
+      const res = await fetch("/api/admin/more/featured-title-style", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fontFamily, fontSizePx: sizeValue }),
+      })
+      if (!res.ok) throw new Error("Save failed")
+      await loadFeaturedTitleStyle()
+      showMessage("success", "Featured title style updated")
+    } catch (error) {
+      console.error("Failed to save featured title style:", error)
+      showMessage("error", "Failed to save featured title style")
+    } finally {
+      setIsSavingFeaturedTitleStyle(false)
+    }
+  }
+
+  const handleClearFeaturedTitleStyle = async () => {
+    if (!confirm("Remove the featured title style override?")) return
+    setIsSavingFeaturedTitleStyle(true)
+    try {
+      const res = await fetch("/api/admin/more/featured-title-style", { method: "DELETE" })
+      if (!res.ok) throw new Error("Delete failed")
+      setSavedFeaturedTitleStyle(null)
+      setFeaturedTitleFont("")
+      setFeaturedTitleSize("")
+      showMessage("success", "Featured title style cleared")
+    } catch (error) {
+      console.error("Failed to clear featured title style:", error)
+      showMessage("error", "Failed to clear featured title style")
+    } finally {
+      setIsSavingFeaturedTitleStyle(false)
+    }
+  }
+
   useEffect(() => {
     if (isAuthenticated) {
       loadMoreVideos()
       loadFeaturedOverride()
       loadFeaturedDescription()
       loadFeaturedVideoOverride()
+      loadFeaturedTitleStyle()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated])
@@ -679,152 +752,212 @@ export default function AdminPanel() {
         )}
 
         <section className="mb-12">
-          <h2 className="text-xl font-semibold mb-4">Featured Thumbnail Override</h2>
-          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800 space-y-3">
-            <div className="space-y-2">
-              <Label className="text-white">Thumbnail URL (auto-filled after upload or paste manually)</Label>
-              <Input
-                value={featuredThumbUrl}
-                onChange={(e) => setFeaturedThumbUrl(e.target.value)}
-                className="bg-black border-zinc-700 text-white"
-                placeholder="https://..."
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+          <h2 className="text-xl font-semibold mb-4">Featured Video Editor</h2>
+          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800 space-y-6">
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-white">Featured Video Override</h3>
               <div className="space-y-2">
-                <Label className="text-white">Upload Image (jpg, png, webp)</Label>
-                <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-black px-3 py-2">
-                  <input
-                    id="featured-thumb-file"
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.webp"
-                    className="hidden"
-                    onChange={(e) => setFeaturedThumbFile(e.target.files?.[0] ?? null)}
-                  />
-                  <label
-                    htmlFor="featured-thumb-file"
-                    className="cursor-pointer rounded-md bg-zinc-700 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-600"
-                  >
-                    Choose File
-                  </label>
-                  <span className="text-sm text-gray-400 truncate">
-                    {featuredThumbFile?.name ?? "No file chosen"}
-                  </span>
-                </div>
+                <Label className="text-white">YouTube link or video ID</Label>
+                <Input
+                  value={featuredVideoUrl}
+                  onChange={(e) => setFeaturedVideoUrl(e.target.value)}
+                  className="bg-black border-zinc-700 text-white"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                />
               </div>
+
               <div className="flex gap-3">
                 <Button
-                  onClick={handleUploadFeaturedThumb}
-                  disabled={isUploadingFeatured}
-                  className="bg-zinc-700 hover:bg-zinc-600 flex-1"
+                  onClick={handleSaveFeaturedVideo}
+                  disabled={isSavingFeaturedVideo}
+                  className="bg-red-600 hover:bg-red-700 flex-1"
                 >
-                  {isUploadingFeatured ? "Uploading..." : "Upload & Apply"}
+                  {isSavingFeaturedVideo ? "Saving..." : "Save Featured Video"}
                 </Button>
-                <Button onClick={handleSaveFeaturedOverride} disabled={isSavingFeatured} className="bg-red-600 hover:bg-red-700 flex-1">
-                  {isSavingFeatured ? "Saving..." : "Apply URL"}
-                </Button>
-                {featuredOverride && (
-                  <Button onClick={handleClearFeaturedOverride} variant="secondary" disabled={isSavingFeatured} className="flex-1">
+                {savedFeaturedVideoId && (
+                  <Button
+                    onClick={handleClearFeaturedVideo}
+                    variant="secondary"
+                    disabled={isSavingFeaturedVideo}
+                    className="flex-1"
+                  >
                     Remove Override
                   </Button>
                 )}
               </div>
+
+              {savedFeaturedVideoId ? (
+                <p className="text-sm text-gray-300">Override active: {savedFeaturedVideoId}</p>
+              ) : (
+                <p className="text-sm text-gray-400">No override set. Homepage will use the most recent upload.</p>
+              )}
             </div>
 
-            {featuredOverride ? (
-              <div className="text-sm text-gray-300 space-y-2">
-                <p>Current override (preview below):</p>
-                <div className="relative w-48 h-28 border border-zinc-800 rounded overflow-hidden">
-                  <Image src={featuredOverride.thumbnailUrl || "/placeholder.svg"} alt="Featured thumb" fill className="object-cover" />
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-white">Featured Thumbnail Override</h3>
+              <div className="space-y-2">
+                <Label className="text-white">Thumbnail URL (auto-filled after upload or paste manually)</Label>
+                <Input
+                  value={featuredThumbUrl}
+                  onChange={(e) => setFeaturedThumbUrl(e.target.value)}
+                  className="bg-black border-zinc-700 text-white"
+                  placeholder="https://..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+                <div className="space-y-2">
+                  <Label className="text-white">Upload Image (jpg, png, webp)</Label>
+                  <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-black px-3 py-2">
+                    <input
+                      id="featured-thumb-file"
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp"
+                      className="hidden"
+                      onChange={(e) => setFeaturedThumbFile(e.target.files?.[0] ?? null)}
+                    />
+                    <label
+                      htmlFor="featured-thumb-file"
+                      className="cursor-pointer rounded-md bg-zinc-700 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-600"
+                    >
+                      Choose File
+                    </label>
+                    <span className="text-sm text-gray-400 truncate">
+                      {featuredThumbFile?.name ?? "No file chosen"}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleUploadFeaturedThumb}
+                    disabled={isUploadingFeatured}
+                    className="bg-zinc-700 hover:bg-zinc-600 flex-1"
+                  >
+                    {isUploadingFeatured ? "Uploading..." : "Upload & Apply"}
+                  </Button>
+                  <Button
+                    onClick={handleSaveFeaturedOverride}
+                    disabled={isSavingFeatured}
+                    className="bg-red-600 hover:bg-red-700 flex-1"
+                  >
+                    {isSavingFeatured ? "Saving..." : "Apply URL"}
+                  </Button>
+                  {featuredOverride && (
+                    <Button
+                      onClick={handleClearFeaturedOverride}
+                      variant="secondary"
+                      disabled={isSavingFeatured}
+                      className="flex-1"
+                    >
+                      Remove Override
+                    </Button>
+                  )}
                 </div>
               </div>
-            ) : (
-              <p className="text-sm text-gray-400">No override set. Upload an image to replace the homepage hero.</p>
-            )}
-          </div>
-        </section>
 
-        <section className="mb-12">
-          <h2 className="text-xl font-semibold mb-4">Featured Description Override</h2>
-          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800 space-y-3">
-            <div className="space-y-2">
-              <Label className="text-white">Description text</Label>
-              <textarea
-                value={featuredDescription}
-                onChange={(e) => setFeaturedDescription(e.target.value)}
-                rows={4}
-                className="w-full bg-black border border-zinc-700 text-white rounded-md p-3 resize-none focus:outline-none focus:ring-2 focus:ring-red-600"
-                placeholder="Featured description shown on the homepage hero..."
-              />
+              {featuredOverride ? (
+                <div className="text-sm text-gray-300 space-y-2">
+                  <p>Current override (preview below):</p>
+                  <div className="relative w-48 h-28 border border-zinc-800 rounded overflow-hidden">
+                    <Image src={featuredOverride.thumbnailUrl || "/placeholder.svg"} alt="Featured thumb" fill className="object-cover" />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400">No override set. Upload an image to replace the homepage hero.</p>
+              )}
             </div>
 
-            <div className="flex gap-3">
-              <Button
-                onClick={handleSaveFeaturedDescription}
-                disabled={isSavingFeaturedDescription}
-                className="bg-red-600 hover:bg-red-700 flex-1"
-              >
-                {isSavingFeaturedDescription ? "Saving..." : "Save Description"}
-              </Button>
-              {savedFeaturedDescription && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-white">Featured Description Override</h3>
+              <div className="space-y-2">
+                <Label className="text-white">Description text</Label>
+                <textarea
+                  value={featuredDescription}
+                  onChange={(e) => setFeaturedDescription(e.target.value)}
+                  rows={4}
+                  className="w-full bg-black border border-zinc-700 text-white rounded-md p-3 resize-none focus:outline-none focus:ring-2 focus:ring-red-600"
+                  placeholder="Featured description shown on the homepage hero..."
+                />
+              </div>
+
+              <div className="flex gap-3">
                 <Button
-                  onClick={handleClearFeaturedDescription}
-                  variant="secondary"
+                  onClick={handleSaveFeaturedDescription}
                   disabled={isSavingFeaturedDescription}
-                  className="flex-1"
+                  className="bg-red-600 hover:bg-red-700 flex-1"
                 >
-                  Remove Override
+                  {isSavingFeaturedDescription ? "Saving..." : "Save Description"}
                 </Button>
+                {savedFeaturedDescription && (
+                  <Button
+                    onClick={handleClearFeaturedDescription}
+                    variant="secondary"
+                    disabled={isSavingFeaturedDescription}
+                    className="flex-1"
+                  >
+                    Remove Override
+                  </Button>
+                )}
+              </div>
+
+              {savedFeaturedDescription ? (
+                <p className="text-sm text-gray-300">Current override is live on the homepage hero.</p>
+              ) : (
+                <p className="text-sm text-gray-400">No override set. Default hero description will be used.</p>
               )}
             </div>
 
-            {savedFeaturedDescription ? (
-              <p className="text-sm text-gray-300">Current override is live on the homepage hero.</p>
-            ) : (
-              <p className="text-sm text-gray-400">No override set. Default hero description will be used.</p>
-            )}
-          </div>
-        </section>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-white">Featured Title Style</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-white">Font family</Label>
+                  <Input
+                    value={featuredTitleFont}
+                    onChange={(e) => setFeaturedTitleFont(e.target.value)}
+                    className="bg-black border-zinc-700 text-white"
+                    placeholder='e.g. "Bebas Neue", "Oswald", "Impact"'
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-white">Font size (px)</Label>
+                  <Input
+                    value={featuredTitleSize}
+                    onChange={(e) => setFeaturedTitleSize(e.target.value)}
+                    className="bg-black border-zinc-700 text-white"
+                    placeholder="e.g. 64"
+                  />
+                </div>
+              </div>
 
-        <section className="mb-12">
-          <h2 className="text-xl font-semibold mb-4">Featured Video Override</h2>
-          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800 space-y-3">
-            <div className="space-y-2">
-              <Label className="text-white">YouTube link or video ID</Label>
-              <Input
-                value={featuredVideoUrl}
-                onChange={(e) => setFeaturedVideoUrl(e.target.value)}
-                className="bg-black border-zinc-700 text-white"
-                placeholder="https://www.youtube.com/watch?v=..."
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <Button
-                onClick={handleSaveFeaturedVideo}
-                disabled={isSavingFeaturedVideo}
-                className="bg-red-600 hover:bg-red-700 flex-1"
-              >
-                {isSavingFeaturedVideo ? "Saving..." : "Save Featured Video"}
-              </Button>
-              {savedFeaturedVideoId && (
+              <div className="flex gap-3">
                 <Button
-                  onClick={handleClearFeaturedVideo}
-                  variant="secondary"
-                  disabled={isSavingFeaturedVideo}
-                  className="flex-1"
+                  onClick={handleSaveFeaturedTitleStyle}
+                  disabled={isSavingFeaturedTitleStyle}
+                  className="bg-red-600 hover:bg-red-700 flex-1"
                 >
-                  Remove Override
+                  {isSavingFeaturedTitleStyle ? "Saving..." : "Save Title Style"}
                 </Button>
+                {savedFeaturedTitleStyle && (
+                  <Button
+                    onClick={handleClearFeaturedTitleStyle}
+                    variant="secondary"
+                    disabled={isSavingFeaturedTitleStyle}
+                    className="flex-1"
+                  >
+                    Remove Override
+                  </Button>
+                )}
+              </div>
+
+              {savedFeaturedTitleStyle ? (
+                <p className="text-sm text-gray-300">
+                  Override active: {savedFeaturedTitleStyle.fontFamily} @ {savedFeaturedTitleStyle.fontSizePx}px
+                </p>
+              ) : (
+                <p className="text-sm text-gray-400">No title style override set.</p>
               )}
             </div>
-
-            {savedFeaturedVideoId ? (
-              <p className="text-sm text-gray-300">Override active: {savedFeaturedVideoId}</p>
-            ) : (
-              <p className="text-sm text-gray-400">No override set. Homepage will use the most recent upload.</p>
-            )}
           </div>
         </section>
 
