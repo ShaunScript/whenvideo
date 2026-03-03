@@ -13,7 +13,7 @@ import type { YouTubeVideo, YouTubeChannelData } from "@/lib/youtube-api"
 import { TwitchLiveIndicator } from "@/components/twitch-live-indicator"
 import { getMoreVideos } from "@/lib/more-storage"
 import { LoadingSpinner } from "@/components/loading-spinner"
-import { FaTwitch, FaXTwitter, FaInstagram, FaTiktok } from "react-icons/fa6"
+import { FaTwitch, FaXTwitter, FaInstagram, FaTiktok, FaDiscord } from "react-icons/fa6"
 import { FaPatreon } from "react-icons/fa"
 
 
@@ -621,6 +621,16 @@ export default function Home() {
   aria-label="Twitch"
 >
   <FaTwitch className={iconClass} />
+</Button>
+
+<Button
+  size="icon"
+  variant="ghost"
+  className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
+  onClick={() => window.open("https://discord.com/doza", "_blank")}
+  aria-label="Discord"
+>
+  <FaDiscord className={iconClass} />
 </Button>
 
 <Button

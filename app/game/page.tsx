@@ -8,9 +8,18 @@ import { Input } from "@/components/ui/input"
 
 export default function GamePage() {
   const canvasRef = React.useRef<HTMLCanvasElement>(null)
+  const explosionParticlesRef = React.useRef<{ x: number; y: number; vx: number; vy: number; life: number }[]>([])
+  const gameStartedRef = React.useRef(false)
+  const gameOverRef = React.useRef(false)
+  const handleGameOverRef = React.useRef<(finalScore: number) => void>(() => {})
   const [score, setScore] = React.useState(0)
   const [highScore, setHighScore] = React.useState(0)
   const [highScoreName, setHighScoreName] = React.useState("")
+  const [leaderboard, setLeaderboard] = React.useState<{ name: string; score: number }[]>([])
+  const [pendingLeaderboardScore, setPendingLeaderboardScore] = React.useState<number | null>(null)
+  const [savedPlayerName, setSavedPlayerName] = React.useState("")
+  const [isEditingName, setIsEditingName] = React.useState(false)
+  const [editNameValue, setEditNameValue] = React.useState("")
   const [showNameInput, setShowNameInput] = React.useState(false)
   const [tempName, setTempName] = React.useState("")
   const [gameStarted, setGameStarted] = React.useState(false)
@@ -55,9 +64,46 @@ export default function GamePage() {
     }
   }, [])
 
+  const loadLeaderboard = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/game/leaderboard", { cache: "no-store" })
+      if (res.ok) {
+        const json = await res.json()
+        const data = Array.isArray(json?.data) ? json.data : []
+        setLeaderboard(data)
+        return
+      }
+    } catch (err) {
+      console.error("Failed to load leaderboard from API:", err)
+    }
+    setLeaderboard([])
+  }, [])
+
   React.useEffect(() => {
     loadHighScore()
-  }, [loadHighScore])
+    loadLeaderboard()
+  }, [loadHighScore, loadLeaderboard])
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+    const stored = window.localStorage.getItem("flappyPlayerName")
+    if (stored) {
+      setSavedPlayerName(stored)
+      setEditNameValue(stored)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    explosionParticlesRef.current = explosionParticles
+  }, [explosionParticles])
+
+  React.useEffect(() => {
+    gameStartedRef.current = gameStarted
+  }, [gameStarted])
+
+  React.useEffect(() => {
+    gameOverRef.current = gameOver
+  }, [gameOver])
 
   const persistHighScore = async (score: number, name: string) => {
     const payload = { score, name }
@@ -77,6 +123,23 @@ export default function GamePage() {
       // ignore storage errors
     }
   }
+
+  const submitLeaderboardScore = React.useCallback(
+    async (scoreValue: number, name: string) => {
+      if (scoreValue <= 0) return
+      try {
+        await fetch("/api/game/leaderboard", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ score: scoreValue, name }),
+        })
+        await loadLeaderboard()
+      } catch (err) {
+        console.error("Failed to submit leaderboard score:", err)
+      }
+    },
+    [loadLeaderboard],
+  )
 
   const triggerExplosion = (x: number, y: number) => {
     const particles = []
@@ -104,10 +167,47 @@ export default function GamePage() {
       }
       setHighScoreName(name)
       await persistHighScore(highScoreData.score, highScoreData.name)
+      const scoreToSubmit = pendingLeaderboardScore ?? highScoreData.score
+      await submitLeaderboardScore(scoreToSubmit, name)
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("flappyPlayerName", name)
+      }
+      setSavedPlayerName(name)
+      setEditNameValue(name)
+      setPendingLeaderboardScore(null)
       setShowNameInput(false)
       setTempName("")
     }
   }
+
+  const handleSavePreferredName = () => {
+    const name = editNameValue.trim().slice(0, 20)
+    if (!name) return
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("flappyPlayerName", name)
+    }
+    setSavedPlayerName(name)
+    setHighScoreName(name)
+    setIsEditingName(false)
+  }
+
+  const handleGameOver = React.useCallback(
+    (finalScore: number) => {
+      setGameOver(true)
+      if (finalScore > highScore) {
+        setHighScore(finalScore)
+        setShowNameInput(true)
+        setPendingLeaderboardScore(finalScore)
+      } else {
+        submitLeaderboardScore(finalScore, savedPlayerName || highScoreName || "Anonymous")
+      }
+    },
+    [highScore, highScoreName, savedPlayerName, submitLeaderboardScore],
+  )
+
+  React.useEffect(() => {
+    handleGameOverRef.current = handleGameOver
+  }, [handleGameOver])
 
   React.useEffect(() => {
     const canvas = canvasRef.current
@@ -121,6 +221,8 @@ export default function GamePage() {
     const PIPE_WIDTH = 50
     const PIPE_GAP = 180
     const PIPE_SPEED = 120
+    const SPEED_INCREMENT = 6
+    const MAX_SPEED = 360
     const BIRD_SIZE = 30
     const PIPE_SPACING = 350
 
@@ -139,18 +241,23 @@ export default function GamePage() {
       }
       setScore(0)
       setGameOver(false)
+      gameOverRef.current = false
+      setShowNameInput(false)
+      setPendingLeaderboardScore(null)
       setExplosionParticles([])
       setShake(false)
     }
 
     const jump = () => {
-      if (!gameStarted) {
+      if (!gameStartedRef.current) {
         setGameStarted(true)
+        gameStartedRef.current = true
         resetGame()
       }
-      if (gameOver) {
+      if (gameOverRef.current) {
         resetGame()
         setGameStarted(true)
+        gameStartedRef.current = true
         return
       }
       gameStateRef.current.bird.velocity = JUMP_STRENGTH
@@ -182,7 +289,7 @@ export default function GamePage() {
       const bird = gameStateRef.current.bird
       const pipes = gameStateRef.current.pipes
 
-      if (gameStarted && !gameOver) {
+      if (gameStartedRef.current && !gameOverRef.current) {
         bird.velocity += GRAVITY * dt
         bird.y += bird.velocity * dt
 
@@ -194,7 +301,8 @@ export default function GamePage() {
 
         for (let i = pipes.length - 1; i >= 0; i--) {
           const pipe = pipes[i]
-          pipe.x -= PIPE_SPEED * dt
+          const speed = Math.min(MAX_SPEED, PIPE_SPEED + gameStateRef.current.score * SPEED_INCREMENT)
+          pipe.x -= speed * dt
 
           const birdLeft = 100 - BIRD_SIZE / 2
           const birdRight = 100 + BIRD_SIZE / 2
@@ -204,11 +312,7 @@ export default function GamePage() {
           if (birdRight > pipe.x && birdLeft < pipe.x + PIPE_WIDTH) {
             if (birdTop < pipe.gapY || birdBottom > pipe.gapY + PIPE_GAP) {
               triggerExplosion(100, bird.y)
-              setGameOver(true)
-              if (gameStateRef.current.score > highScore) {
-                setHighScore(gameStateRef.current.score)
-                setShowNameInput(true)
-              }
+              handleGameOverRef.current(gameStateRef.current.score)
               return
             }
           }
@@ -226,16 +330,12 @@ export default function GamePage() {
 
         if (bird.y - BIRD_SIZE / 2 < 0 || bird.y + BIRD_SIZE / 2 > canvas.height) {
           triggerExplosion(100, bird.y)
-          setGameOver(true)
-          if (gameStateRef.current.score > highScore) {
-            setHighScore(gameStateRef.current.score)
-            setShowNameInput(true)
-          }
+          handleGameOverRef.current(gameStateRef.current.score)
           return
         }
       }
 
-      if (!gameOver) {
+      if (!gameOverRef.current) {
         ctx.fillStyle = "#dc2626"
         ctx.beginPath()
         ctx.arc(100, bird.y, BIRD_SIZE / 2, 0, Math.PI * 2)
@@ -248,9 +348,10 @@ export default function GamePage() {
         ctx.fillRect(pipe.x, pipe.gapY + PIPE_GAP, PIPE_WIDTH, canvas.height - (pipe.gapY + PIPE_GAP))
       }
 
-      if (gameOver && explosionParticles.length > 0) {
+      const currentParticles = explosionParticlesRef.current
+      if (gameOverRef.current && currentParticles.length > 0) {
         ctx.fillStyle = "#dc2626"
-        for (const particle of explosionParticles) {
+        for (const particle of currentParticles) {
           ctx.globalAlpha = particle.life
           ctx.beginPath()
           ctx.arc(particle.x, particle.y, 3, 0, Math.PI * 2)
@@ -274,7 +375,7 @@ export default function GamePage() {
         cancelAnimationFrame(gameStateRef.current.animationId)
       }
     }
-  }, [gameStarted, gameOver, highScore, explosionParticles])
+  }, [])
 
   React.useEffect(() => {
     if (explosionParticles.length === 0) return
@@ -306,7 +407,7 @@ export default function GamePage() {
         </Link>
       </div>
 
-      <div className="flex items-center justify-center gap-8 w-full">
+      <div className="flex flex-col lg:flex-row items-center justify-center gap-8 w-full">
         {/* Current Score - Left Side */}
         <div className="text-center flex-shrink-0">
           <p className="text-gray-400 text-sm mb-2">Score</p>
@@ -342,11 +443,66 @@ export default function GamePage() {
           )}
         </div>
 
-        {/* High Score - Right Side */}
-        <div className="text-center flex-shrink-0">
-          <p className="text-gray-400 text-sm mb-2">High Score</p>
-          <p className="text-red-600 text-4xl font-bold">{highScore}</p>
-          {highScoreName && <p className="text-white text-lg mt-2">{highScoreName}</p>}
+        {/* Leaderboard - Right Side */}
+        <div className="w-full max-w-xs flex-shrink-0">
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-lg p-4 shadow-lg">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-gray-300 text-sm font-semibold">Leaderboard</p>
+              <div className="text-right">
+                <p className="text-[11px] text-gray-500">Your Best</p>
+                <p className="text-red-500 text-sm font-semibold">
+                  {highScoreName ? `${highScoreName} — ${highScore}` : highScore}
+                </p>
+              </div>
+            </div>
+            <div className="mb-3 rounded-md border border-zinc-800 bg-black/40 p-2">
+              <p className="text-[11px] text-gray-500 mb-1">Your username</p>
+              {isEditingName ? (
+                <div className="flex gap-2">
+                  <Input
+                    value={editNameValue}
+                    onChange={(e) => setEditNameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSavePreferredName()
+                    }}
+                    className="bg-black border-zinc-700 text-white text-sm h-8"
+                    placeholder="Enter name"
+                    maxLength={20}
+                  />
+                  <Button onClick={handleSavePreferredName} className="bg-red-600 hover:bg-red-700 h-8 px-3 text-xs">
+                    Save
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm text-white truncate">{savedPlayerName || "Anonymous"}</p>
+                  <Button
+                    onClick={() => setIsEditingName(true)}
+                    variant="secondary"
+                    className="h-7 px-2 text-[11px]"
+                  >
+                    Edit
+                  </Button>
+                </div>
+              )}
+            </div>
+            {leaderboard.length === 0 ? (
+              <p className="text-gray-400 text-sm">No scores yet.</p>
+            ) : (
+              <ol className="space-y-2">
+                {leaderboard.map((entry, index) => (
+                  <li
+                    key={`${entry.name}-${entry.score}-${index}`}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <span className="text-gray-400 w-5">{index + 1}.</span>
+                    <span className="text-white truncate flex-1 ml-2">{entry.name}</span>
+                    <span className="text-red-500 font-semibold ml-3">{entry.score}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
         </div>
       </div>
 
