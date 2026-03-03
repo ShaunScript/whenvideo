@@ -111,6 +111,12 @@ export default function AdminPanel() {
     { key: "more", label: "More Videos", panelId: "tab-panel-more" },
     { key: "current", label: "Current More Videos", panelId: "tab-panel-current" },
   ]
+  const [featuredSubTab, setFeaturedSubTab] = useState<"video" | "style" | "title">("video")
+  const featuredTabs: { key: "video" | "style" | "title"; label: string; panelId: string }[] = [
+    { key: "video", label: "Video Override", panelId: "featured-panel-video" },
+    { key: "style", label: "Featured Title Style", panelId: "featured-panel-style" },
+    { key: "title", label: "Title Override", panelId: "featured-panel-title" },
+  ]
 
   useEffect(() => {
     const fromUrl = searchParams.get("tab") as TabKey | null
@@ -899,7 +905,46 @@ export default function AdminPanel() {
         <section id="tab-panel-featured" role="tabpanel" aria-labelledby="tab-featured" className="mb-12">
           <h2 className="text-xl font-semibold mb-4">Featured Video Editor</h2>
           <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800 space-y-6">
-            <div className="space-y-3">
+            <div
+              role="tablist"
+              aria-label="Featured editor sections"
+              className="flex flex-wrap gap-2 border-b border-zinc-800 pb-3"
+              onKeyDown={(event) => {
+                if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return
+                event.preventDefault()
+                const currentIndex = featuredTabs.findIndex((tab) => tab.key === featuredSubTab)
+                const direction = event.key === "ArrowRight" ? 1 : -1
+                const nextIndex = (currentIndex + direction + featuredTabs.length) % featuredTabs.length
+                const nextTab = featuredTabs[nextIndex]
+                if (nextTab) {
+                  setFeaturedSubTab(nextTab.key)
+                  const nextButton = document.getElementById(`featured-tab-${nextTab.key}`) as HTMLButtonElement | null
+                  nextButton?.focus()
+                }
+              }}
+            >
+              {featuredTabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  id={`featured-tab-${tab.key}`}
+                  role="tab"
+                  type="button"
+                  aria-selected={featuredSubTab === tab.key}
+                  aria-controls={tab.panelId}
+                  tabIndex={featuredSubTab === tab.key ? 0 : -1}
+                  onClick={() => setFeaturedSubTab(tab.key)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    featuredSubTab === tab.key ? "bg-red-600 text-white" : "bg-black text-gray-300 hover:text-white"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {featuredSubTab === "video" && (
+            <div id="featured-panel-video" role="tabpanel" aria-labelledby="featured-tab-video" className="space-y-6">
+              <div className="space-y-3">
               <h3 className="text-sm font-semibold text-white">Featured Video Override</h3>
               <div className="space-y-2">
                 <Label className="text-white">YouTube link or video ID</Label>
@@ -1051,7 +1096,11 @@ export default function AdminPanel() {
                 <p className="text-sm text-gray-400">No override set. Default hero description will be used.</p>
               )}
             </div>
+            </div>
+            )}
 
+            {featuredSubTab === "style" && (
+            <div id="featured-panel-style" role="tabpanel" aria-labelledby="featured-tab-style" className="space-y-6">
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-white">Featured Title Style</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1158,46 +1207,6 @@ export default function AdminPanel() {
                 <p className="text-sm text-gray-400">No title style override set.</p>
               )}
             </div>
-
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-white">Featured Title Override</h3>
-              <div className="space-y-2">
-                <Label className="text-white">Title text</Label>
-                <Input
-                  value={featuredTitleOverride}
-                  onChange={(e) => setFeaturedTitleOverride(e.target.value)}
-                  className="bg-black border-zinc-700 text-white"
-                  placeholder="Featured video title override..."
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleSaveFeaturedTitleOverride}
-                  disabled={isSavingFeaturedTitleOverride}
-                  className="bg-red-600 hover:bg-red-700 flex-1"
-                >
-                  {isSavingFeaturedTitleOverride ? "Saving..." : "Save Title"}
-                </Button>
-                {savedFeaturedTitleOverride && (
-                  <Button
-                    onClick={handleClearFeaturedTitleOverride}
-                    variant="secondary"
-                    disabled={isSavingFeaturedTitleOverride}
-                    className="flex-1"
-                  >
-                    Remove Override
-                  </Button>
-                )}
-              </div>
-
-              {savedFeaturedTitleOverride ? (
-                <p className="text-sm text-gray-300">Current override is live on the homepage hero.</p>
-              ) : (
-                <p className="text-sm text-gray-400">No override set. Default title will be used.</p>
-              )}
-            </div>
-
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-white">Preview</h3>
               <div className="relative overflow-hidden rounded-lg border border-zinc-800">
@@ -1235,6 +1244,49 @@ export default function AdminPanel() {
                 </div>
               </div>
             </div>
+            </div>
+            )}
+
+            {featuredSubTab === "title" && (
+            <div id="featured-panel-title" role="tabpanel" aria-labelledby="featured-tab-title" className="space-y-3">
+              <h3 className="text-sm font-semibold text-white">Featured Title Override</h3>
+              <div className="space-y-2">
+                <Label className="text-white">Title text</Label>
+                <Input
+                  value={featuredTitleOverride}
+                  onChange={(e) => setFeaturedTitleOverride(e.target.value)}
+                  className="bg-black border-zinc-700 text-white"
+                  placeholder="Featured video title override..."
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleSaveFeaturedTitleOverride}
+                  disabled={isSavingFeaturedTitleOverride}
+                  className="bg-red-600 hover:bg-red-700 flex-1"
+                >
+                  {isSavingFeaturedTitleOverride ? "Saving..." : "Save Title"}
+                </Button>
+                {savedFeaturedTitleOverride && (
+                  <Button
+                    onClick={handleClearFeaturedTitleOverride}
+                    variant="secondary"
+                    disabled={isSavingFeaturedTitleOverride}
+                    className="flex-1"
+                  >
+                    Remove Override
+                  </Button>
+                )}
+              </div>
+
+              {savedFeaturedTitleOverride ? (
+                <p className="text-sm text-gray-300">Current override is live on the homepage hero.</p>
+              ) : (
+                <p className="text-sm text-gray-400">No override set. Default title will be used.</p>
+              )}
+            </div>
+            )}
           </div>
         </section>
         )}
