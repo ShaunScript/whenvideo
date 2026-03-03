@@ -10,7 +10,19 @@ export async function readLeaderboard(): Promise<LeaderboardEntry[]> {
   try {
     const raw = await fs.readFile(FILE_PATH, "utf8")
     const data = JSON.parse(raw)
-    return Array.isArray(data) ? data : []
+    if (!Array.isArray(data)) return []
+    let hasMissing = false
+    const normalized = data.map((entry, index) => {
+      const score = Number(entry?.score) || 0
+      const name = typeof entry?.name === "string" ? entry.name : "Anonymous"
+      const ts = Number.isFinite(entry?.ts) ? Number(entry.ts) : Date.now() + index
+      if (!Number.isFinite(entry?.ts)) hasMissing = true
+      return { score, name, ts }
+    })
+    if (hasMissing) {
+      await writeLeaderboard(normalized)
+    }
+    return normalized
   } catch {
     return []
   }
