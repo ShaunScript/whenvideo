@@ -8,7 +8,9 @@ const FILE_PATH = path.join(process.cwd(), "data", "flappy-leaderboard.json")
 const MAX_ENTRIES = 10
 const KV_KEY = "game:leaderboard"
 
-const hasKv = () => !!process.env.KV_REST_API_URL || !!process.env.UPSTASH_REDIS_REST_URL
+const hasKv = () =>
+  (!!process.env.KV_REST_API_URL && !!process.env.KV_REST_API_TOKEN) ||
+  (!!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN)
 
 const normalizeEntries = async (data: any) => {
   if (!Array.isArray(data)) return [] as LeaderboardEntry[]
@@ -43,6 +45,9 @@ export async function writeLeaderboard(entries: LeaderboardEntry[]) {
   if (hasKv()) {
     await kv.set(KV_KEY, entries)
     return
+  }
+  if (process.env.VERCEL === "1") {
+    throw new Error("KV not configured; filesystem is read-only in production")
   }
   await fs.mkdir(path.dirname(FILE_PATH), { recursive: true })
   await fs.writeFile(FILE_PATH, JSON.stringify(entries, null, 2), "utf8")

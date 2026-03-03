@@ -9,50 +9,70 @@ const cleanName = (value: unknown) => {
 }
 
 export async function GET() {
-  return NextResponse.json({ data: await readLeaderboard() })
+  try {
+    return NextResponse.json({ data: await readLeaderboard() })
+  } catch (error: any) {
+    console.error("[api/game/leaderboard] GET error:", error?.message || error)
+    return NextResponse.json({ success: false, error: error?.message || "Failed to read leaderboard" }, { status: 500 })
+  }
 }
 
 export async function POST(req: Request) {
-  const { score, name } = await req.json()
-  const numericScore = Number(score) || 0
-  const updated = await submitLeaderboardEntry(numericScore, cleanName(name))
-  return NextResponse.json({ success: true, data: updated })
+  try {
+    const { score, name } = await req.json()
+    const numericScore = Number(score) || 0
+    const updated = await submitLeaderboardEntry(numericScore, cleanName(name))
+    return NextResponse.json({ success: true, data: updated })
+  } catch (error: any) {
+    console.error("[api/game/leaderboard] POST error:", error?.message || error)
+    return NextResponse.json({ success: false, error: error?.message || "Failed to write leaderboard" }, { status: 500 })
+  }
 }
 
 export async function PATCH(req: Request) {
-  const url = new URL(req.url)
-  let numericTs = Number(url.searchParams.get("ts"))
-  let name = url.searchParams.get("name") ?? ""
-  if (!Number.isFinite(numericTs) || !name) {
-    try {
-      const body = await req.json()
-      numericTs = Number(body?.ts)
-      name = typeof body?.name === "string" ? body.name : name
-    } catch {
-      // ignore
+  try {
+    const url = new URL(req.url)
+    let numericTs = Number(url.searchParams.get("ts"))
+    let name = url.searchParams.get("name") ?? ""
+    if (!Number.isFinite(numericTs) || !name) {
+      try {
+        const body = await req.json()
+        numericTs = Number(body?.ts)
+        name = typeof body?.name === "string" ? body.name : name
+      } catch {
+        // ignore
+      }
     }
+    if (!Number.isFinite(numericTs)) {
+      return NextResponse.json({ success: false, error: "Invalid entry id" }, { status: 400 })
+    }
+    const updated = await updateLeaderboardEntry(numericTs, cleanName(name))
+    return NextResponse.json({ success: true, data: updated })
+  } catch (error: any) {
+    console.error("[api/game/leaderboard] PATCH error:", error?.message || error)
+    return NextResponse.json({ success: false, error: error?.message || "Failed to update leaderboard" }, { status: 500 })
   }
-  if (!Number.isFinite(numericTs)) {
-    return NextResponse.json({ success: false, error: "Invalid entry id" }, { status: 400 })
-  }
-  const updated = await updateLeaderboardEntry(numericTs, cleanName(name))
-  return NextResponse.json({ success: true, data: updated })
 }
 
 export async function DELETE(req: Request) {
-  const url = new URL(req.url)
-  let numericTs = Number(url.searchParams.get("ts"))
-  if (!Number.isFinite(numericTs)) {
-    try {
-      const body = await req.json()
-      numericTs = Number(body?.ts)
-    } catch {
-      // ignore
+  try {
+    const url = new URL(req.url)
+    let numericTs = Number(url.searchParams.get("ts"))
+    if (!Number.isFinite(numericTs)) {
+      try {
+        const body = await req.json()
+        numericTs = Number(body?.ts)
+      } catch {
+        // ignore
+      }
     }
+    if (!Number.isFinite(numericTs)) {
+      return NextResponse.json({ success: false, error: "Invalid entry id" }, { status: 400 })
+    }
+    const updated = await removeLeaderboardEntry(numericTs)
+    return NextResponse.json({ success: true, data: updated })
+  } catch (error: any) {
+    console.error("[api/game/leaderboard] DELETE error:", error?.message || error)
+    return NextResponse.json({ success: false, error: error?.message || "Failed to remove leaderboard entry" }, { status: 500 })
   }
-  if (!Number.isFinite(numericTs)) {
-    return NextResponse.json({ success: false, error: "Invalid entry id" }, { status: 400 })
-  }
-  const updated = await removeLeaderboardEntry(numericTs)
-  return NextResponse.json({ success: true, data: updated })
 }

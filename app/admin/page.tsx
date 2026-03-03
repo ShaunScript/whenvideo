@@ -646,19 +646,20 @@ export default function AdminPanel() {
       const res = await fetch(
         `/api/game/leaderboard?ts=${encodeURIComponent(String(editingLeaderboardTs))}&name=${encodeURIComponent(name)}`,
         {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ts: editingLeaderboardTs, name }),
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ts: editingLeaderboardTs, name }),
         },
       )
-      if (!res.ok) throw new Error("Update failed")
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || "Update failed")
       await loadGameLeaderboard()
       setEditingLeaderboardTs(null)
       setEditingLeaderboardName("")
       showMessage("success", "Leaderboard name updated")
     } catch (error) {
       console.error("Failed to update leaderboard name:", error)
-      showMessage("error", "Failed to update leaderboard name")
+      showMessage("error", error instanceof Error ? error.message : "Failed to update leaderboard name")
     }
   }
 
@@ -670,12 +671,13 @@ export default function AdminPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ts: entryTs }),
       })
-      if (!res.ok) throw new Error("Delete failed")
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || "Delete failed")
       await loadGameLeaderboard()
       showMessage("success", "Leaderboard entry removed")
     } catch (error) {
       console.error("Failed to remove leaderboard entry:", error)
-      showMessage("error", "Failed to remove leaderboard entry")
+      showMessage("error", error instanceof Error ? error.message : "Failed to remove leaderboard entry")
     }
   }
 
