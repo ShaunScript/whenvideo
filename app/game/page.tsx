@@ -311,9 +311,10 @@ export default function GamePage() {
 
           if (birdRight > pipe.x && birdLeft < pipe.x + PIPE_WIDTH) {
             if (birdTop < pipe.gapY || birdBottom > pipe.gapY + PIPE_GAP) {
-              triggerExplosion(100, bird.y)
-              handleGameOverRef.current(gameStateRef.current.score)
-              return
+              if (!gameOverRef.current) {
+                triggerExplosion(100, bird.y)
+                handleGameOverRef.current(gameStateRef.current.score)
+              }
             }
           }
 
@@ -329,9 +330,10 @@ export default function GamePage() {
         }
 
         if (bird.y - BIRD_SIZE / 2 < 0 || bird.y + BIRD_SIZE / 2 > canvas.height) {
-          triggerExplosion(100, bird.y)
-          handleGameOverRef.current(gameStateRef.current.score)
-          return
+          if (!gameOverRef.current) {
+            triggerExplosion(100, bird.y)
+            handleGameOverRef.current(gameStateRef.current.score)
+          }
         }
       }
 

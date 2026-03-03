@@ -624,7 +624,7 @@ export default function Home() {
                 size="icon"
                 variant="ghost"
                 className="hover:bg-white/10 h-8 w-8"
-                onClick={() => window.open("https://discord.com/doza", "_blank")}
+                onClick={() => window.open("https://discord.gg/doza", "_blank")}
                 aria-label="Discord"
               >
                 <FaDiscord className="w-3.5 h-3.5" />
@@ -657,7 +657,7 @@ export default function Home() {
   size="icon"
   variant="ghost"
   className="hover:bg-white/10 h-7 w-7 xl:h-8 xl:w-8"
-  onClick={() => window.open("https://discord.com/doza", "_blank")}
+  onClick={() => window.open("https://discord.gg/doza", "_blank")}
   aria-label="Discord"
 >
   <FaDiscord className={iconClass} />
