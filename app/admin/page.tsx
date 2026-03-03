@@ -643,11 +643,14 @@ export default function AdminPanel() {
       return
     }
     try {
-      const res = await fetch("/api/game/leaderboard", {
+      const res = await fetch(
+        `/api/game/leaderboard?ts=${encodeURIComponent(String(editingLeaderboardTs))}&name=${encodeURIComponent(name)}`,
+        {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ts: editingLeaderboardTs, name }),
-      })
+        },
+      )
       if (!res.ok) throw new Error("Update failed")
       await loadGameLeaderboard()
       setEditingLeaderboardTs(null)
@@ -662,7 +665,7 @@ export default function AdminPanel() {
   const handleDeleteLeaderboardEntry = async (entryTs: number) => {
     if (!confirm("Remove this leaderboard entry?")) return
     try {
-      const res = await fetch("/api/game/leaderboard", {
+      const res = await fetch(`/api/game/leaderboard?ts=${encodeURIComponent(String(entryTs))}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ts: entryTs }),

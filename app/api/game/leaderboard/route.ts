@@ -20,8 +20,18 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const { ts, name } = await req.json()
-  const numericTs = Number(ts)
+  const url = new URL(req.url)
+  let numericTs = Number(url.searchParams.get("ts"))
+  let name = url.searchParams.get("name") ?? ""
+  if (!Number.isFinite(numericTs) || !name) {
+    try {
+      const body = await req.json()
+      numericTs = Number(body?.ts)
+      name = typeof body?.name === "string" ? body.name : name
+    } catch {
+      // ignore
+    }
+  }
   if (!Number.isFinite(numericTs)) {
     return NextResponse.json({ success: false, error: "Invalid entry id" }, { status: 400 })
   }
@@ -30,8 +40,16 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const { ts } = await req.json()
-  const numericTs = Number(ts)
+  const url = new URL(req.url)
+  let numericTs = Number(url.searchParams.get("ts"))
+  if (!Number.isFinite(numericTs)) {
+    try {
+      const body = await req.json()
+      numericTs = Number(body?.ts)
+    } catch {
+      // ignore
+    }
+  }
   if (!Number.isFinite(numericTs)) {
     return NextResponse.json({ success: false, error: "Invalid entry id" }, { status: 400 })
   }
