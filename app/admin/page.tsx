@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Plus, Trash2, ArrowLeft, Lock } from "lucide-react"
@@ -67,6 +67,7 @@ function extractYouTubeVideoId(input: string): string | null {
 
 export default function AdminPanel() {
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   // ===== Main Admin state (kept) =====
   const [moreVideos, setMoreVideos] = useState<Video[]>([])
@@ -103,6 +104,33 @@ export default function AdminPanel() {
   const [fontUploadFile, setFontUploadFile] = useState<File | null>(null)
   const [isUploadingFont, setIsUploadingFont] = useState(false)
   const [isSavingFeaturedTitleStyle, setIsSavingFeaturedTitleStyle] = useState(false)
+  type TabKey = "featured" | "more" | "current"
+  const [activeTab, setActiveTab] = useState<TabKey>("featured")
+  const tabs: { key: TabKey; label: string; panelId: string }[] = [
+    { key: "featured", label: "Featured Video Editor", panelId: "tab-panel-featured" },
+    { key: "more", label: "More Videos", panelId: "tab-panel-more" },
+    { key: "current", label: "Current More Videos", panelId: "tab-panel-current" },
+  ]
+
+  useEffect(() => {
+    const fromUrl = searchParams.get("tab") as TabKey | null
+    if (fromUrl && tabs.some((t) => t.key === fromUrl)) {
+      setActiveTab(fromUrl)
+      return
+    }
+    if (typeof window === "undefined") return
+    const saved = window.localStorage.getItem("admin.activeTab") as TabKey | null
+    if (saved && tabs.some((t) => t.key === saved)) {
+      setActiveTab(saved)
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("admin.activeTab", activeTab)
+    }
+    router.replace(`/admin?tab=${activeTab}`)
+  }, [activeTab, router])
 
   // ===== Auth gate (kept) =====
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -830,7 +858,45 @@ export default function AdminPanel() {
           </div>
         )}
 
-        <section className="mb-12">
+        <div
+          role="tablist"
+          aria-label="Admin sections"
+          className="flex flex-wrap gap-2 border-b border-zinc-800 pb-3"
+          onKeyDown={(event) => {
+            if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return
+            event.preventDefault()
+            const currentIndex = tabs.findIndex((tab) => tab.key === activeTab)
+            const direction = event.key === "ArrowRight" ? 1 : -1
+            const nextIndex = (currentIndex + direction + tabs.length) % tabs.length
+            const nextTab = tabs[nextIndex]
+            if (nextTab) {
+              setActiveTab(nextTab.key)
+              const nextButton = document.getElementById(`tab-${nextTab.key}`) as HTMLButtonElement | null
+              nextButton?.focus()
+            }
+          }}
+        >
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              id={`tab-${tab.key}`}
+              role="tab"
+              type="button"
+              aria-selected={activeTab === tab.key}
+              aria-controls={tab.panelId}
+              tabIndex={activeTab === tab.key ? 0 : -1}
+              onClick={() => setActiveTab(tab.key)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                activeTab === tab.key ? "bg-red-600 text-white" : "bg-zinc-900 text-gray-300 hover:text-white"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === "featured" && (
+        <section id="tab-panel-featured" role="tabpanel" aria-labelledby="tab-featured" className="mb-12">
           <h2 className="text-xl font-semibold mb-4">Featured Video Editor</h2>
           <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800 space-y-6">
             <div className="space-y-3">
@@ -1171,8 +1237,10 @@ export default function AdminPanel() {
             </div>
           </div>
         </section>
+        )}
 
-        <section className="mb-12">
+        {activeTab === "more" && (
+        <section id="tab-panel-more" role="tabpanel" aria-labelledby="tab-more" className="mb-12">
           <h2 className="text-xl font-semibold mb-4">Add Video to More</h2>
           <div className="flex flex-col gap-2 mb-4">
             <textarea
@@ -1189,8 +1257,10 @@ export default function AdminPanel() {
           </div>
           <p className="text-sm text-gray-400">Paste YouTube URLs (one per line). Supports full URLs or video IDs.</p>
         </section>
+        )}
 
-        <section>
+        {activeTab === "current" && (
+        <section id="tab-panel-current" role="tabpanel" aria-labelledby="tab-current">
           <h2 className="text-xl font-semibold mb-4">Current More ({moreVideos.length})</h2>
           {isLoading ? (
             <p className="text-gray-400">Loading...</p>
@@ -1236,6 +1306,7 @@ export default function AdminPanel() {
             </div>
           )}
         </section>
+        )}
       </main>
     </div>
   )
