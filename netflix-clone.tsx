@@ -610,6 +610,36 @@ export default function Home() {
               <Search className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
 
+            <div className="md:hidden flex items-center gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="hover:bg-white/10 h-8 w-8"
+                onClick={() => window.open("https://www.twitch.tv/dozaproduction", "_blank")}
+                aria-label="Twitch"
+              >
+                <FaTwitch className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="hover:bg-white/10 h-8 w-8"
+                onClick={() => window.open("https://discord.com/doza", "_blank")}
+                aria-label="Discord"
+              >
+                <FaDiscord className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="hover:bg-white/10 h-8 w-8"
+                onClick={() => window.open("https://www.instagram.com/doza.production", "_blank")}
+                aria-label="Instagram"
+              >
+                <FaInstagram className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+
 <div className="hidden md:flex items-center space-x-0.5 xl:space-x-1">
 <TwitchLiveIndicator channelName="dozaproduction" />
 
@@ -704,6 +734,26 @@ aria-label="Patreon"
           </div>
         </div>
 
+        <div className="md:hidden px-3 pb-2">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="rounded-full bg-white/10 text-white text-xs font-semibold px-3 py-1.5 border border-white/10 hover:bg-white/20 transition"
+              onClick={() => {
+                const el = document.getElementById("movies")
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
+              }}
+            >
+              Videos
+            </button>
+            <Link
+              href="/twitch-stats"
+              className="rounded-full bg-white/10 text-white text-xs font-semibold px-3 py-1.5 border border-white/10 hover:bg-white/20 transition"
+            >
+              Twitch Leaderboard
+            </Link>
+          </div>
+        </div>
       </header>
 
       {isSearchExpanded && (

@@ -104,12 +104,13 @@ export default function AdminPanel() {
   const [fontUploadFile, setFontUploadFile] = useState<File | null>(null)
   const [isUploadingFont, setIsUploadingFont] = useState(false)
   const [isSavingFeaturedTitleStyle, setIsSavingFeaturedTitleStyle] = useState(false)
-  type TabKey = "featured" | "more" | "current"
+  type TabKey = "featured" | "more" | "current" | "game"
   const [activeTab, setActiveTab] = useState<TabKey>("featured")
   const tabs: { key: TabKey; label: string; panelId: string }[] = [
     { key: "featured", label: "Featured Video Editor", panelId: "tab-panel-featured" },
     { key: "more", label: "More Videos", panelId: "tab-panel-more" },
     { key: "current", label: "Current More Videos", panelId: "tab-panel-current" },
+    { key: "game", label: "Game Leaderboard", panelId: "tab-panel-game" },
   ]
   const [featuredSubTab, setFeaturedSubTab] = useState<"video" | "style" | "title">("video")
   const featuredTabs: { key: "video" | "style" | "title"; label: string; panelId: string }[] = [
@@ -117,6 +118,10 @@ export default function AdminPanel() {
     { key: "style", label: "Featured Title Style", panelId: "featured-panel-style" },
     { key: "title", label: "Title Override", panelId: "featured-panel-title" },
   ]
+  const [gameLeaderboard, setGameLeaderboard] = useState<{ name: string; score: number; ts: number }[]>([])
+  const [isLoadingGameLeaderboard, setIsLoadingGameLeaderboard] = useState(false)
+  const [editingLeaderboardTs, setEditingLeaderboardTs] = useState<number | null>(null)
+  const [editingLeaderboardName, setEditingLeaderboardName] = useState("")
 
   useEffect(() => {
     const fromUrl = searchParams.get("tab") as TabKey | null
@@ -610,6 +615,67 @@ export default function AdminPanel() {
     }
   }
 
+  const loadGameLeaderboard = async () => {
+    setIsLoadingGameLeaderboard(true)
+    try {
+      const res = await fetch("/api/game/leaderboard", { cache: "no-store" })
+      if (!res.ok) throw new Error("Failed to fetch game leaderboard")
+      const json = await res.json()
+      setGameLeaderboard(Array.isArray(json?.data) ? json.data : [])
+    } catch (error) {
+      console.error("Failed to load game leaderboard:", error)
+      setGameLeaderboard([])
+    } finally {
+      setIsLoadingGameLeaderboard(false)
+    }
+  }
+
+  const handleEditLeaderboardName = (entry: { ts: number; name: string }) => {
+    setEditingLeaderboardTs(entry.ts)
+    setEditingLeaderboardName(entry.name)
+  }
+
+  const handleSaveLeaderboardName = async () => {
+    if (editingLeaderboardTs == null) return
+    const name = editingLeaderboardName.trim()
+    if (!name) {
+      showMessage("error", "Enter a name")
+      return
+    }
+    try {
+      const res = await fetch("/api/game/leaderboard", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ts: editingLeaderboardTs, name }),
+      })
+      if (!res.ok) throw new Error("Update failed")
+      await loadGameLeaderboard()
+      setEditingLeaderboardTs(null)
+      setEditingLeaderboardName("")
+      showMessage("success", "Leaderboard name updated")
+    } catch (error) {
+      console.error("Failed to update leaderboard name:", error)
+      showMessage("error", "Failed to update leaderboard name")
+    }
+  }
+
+  const handleDeleteLeaderboardEntry = async (entryTs: number) => {
+    if (!confirm("Remove this leaderboard entry?")) return
+    try {
+      const res = await fetch("/api/game/leaderboard", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ts: entryTs }),
+      })
+      if (!res.ok) throw new Error("Delete failed")
+      await loadGameLeaderboard()
+      showMessage("success", "Leaderboard entry removed")
+    } catch (error) {
+      console.error("Failed to remove leaderboard entry:", error)
+      showMessage("error", "Failed to remove leaderboard entry")
+    }
+  }
+
   useEffect(() => {
     if (isAuthenticated) {
       loadMoreVideos()
@@ -619,6 +685,7 @@ export default function AdminPanel() {
       loadFeaturedTitleStyle()
       loadFeaturedTitleOverride()
       loadUploadedFonts()
+      loadGameLeaderboard()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated])
@@ -1355,6 +1422,83 @@ export default function AdminPanel() {
                   </Button>
                 </div>
               )}
+            </div>
+          )}
+        </section>
+        )}
+
+        {activeTab === "game" && (
+        <section id="tab-panel-game" role="tabpanel" aria-labelledby="tab-game" className="mb-12">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Game Leaderboard</h2>
+            <Button
+              onClick={loadGameLeaderboard}
+              variant="secondary"
+              className="text-xs"
+              disabled={isLoadingGameLeaderboard}
+            >
+              {isLoadingGameLeaderboard ? "Refreshing..." : "Refresh"}
+            </Button>
+          </div>
+
+          {isLoadingGameLeaderboard ? (
+            <p className="text-gray-400">Loading leaderboard...</p>
+          ) : gameLeaderboard.length === 0 ? (
+            <div className="bg-zinc-900 rounded-lg p-8 text-center text-gray-400 border border-zinc-800">
+              <p>No leaderboard entries yet.</p>
+            </div>
+          ) : (
+            <div className="bg-zinc-900 rounded-lg border border-zinc-800 divide-y divide-zinc-800">
+              {gameLeaderboard.map((entry, index) => (
+                <div key={entry.ts} className="flex flex-col md:flex-row md:items-center gap-3 p-4">
+                  <div className="text-sm text-gray-400 w-10">#{index + 1}</div>
+                  <div className="flex-1 min-w-0">
+                    {editingLeaderboardTs === entry.ts ? (
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Input
+                          value={editingLeaderboardName}
+                          onChange={(e) => setEditingLeaderboardName(e.target.value)}
+                          className="bg-black border-zinc-700 text-white"
+                          maxLength={20}
+                        />
+                        <div className="flex gap-2">
+                          <Button onClick={handleSaveLeaderboardName} className="bg-red-600 hover:bg-red-700">
+                            Save
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            onClick={() => {
+                              setEditingLeaderboardTs(null)
+                              setEditingLeaderboardName("")
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="text-white font-medium truncate">{entry.name}</div>
+                        <div className="text-gray-400 text-xs">Score: {entry.score}</div>
+                      </div>
+                    )}
+                  </div>
+                  {editingLeaderboardTs !== entry.ts && (
+                    <div className="flex gap-2">
+                      <Button variant="secondary" size="sm" onClick={() => handleEditLeaderboardName(entry)}>
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteLeaderboardEntry(entry.ts)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </section>

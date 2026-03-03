@@ -32,3 +32,17 @@ export async function submitLeaderboardEntry(score: number, name: string) {
   await writeLeaderboard(merged)
   return merged
 }
+
+export async function removeLeaderboardEntry(ts: number) {
+  const existing = await readLeaderboard()
+  const filtered = existing.filter((entry) => entry.ts !== ts)
+  await writeLeaderboard(filtered)
+  return filtered
+}
+
+export async function updateLeaderboardEntry(ts: number, name: string) {
+  const existing = await readLeaderboard()
+  const updated = existing.map((entry) => (entry.ts === ts ? { ...entry, name } : entry))
+  await writeLeaderboard(updated)
+  return updated
+}
