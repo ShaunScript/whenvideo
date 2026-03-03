@@ -1,34 +1,49 @@
 import { promises as fs } from "fs"
 import path from "path"
+import { kv } from "@vercel/kv"
 
 export type LeaderboardEntry = { name: string; score: number; ts: number }
 
 const FILE_PATH = path.join(process.cwd(), "data", "flappy-leaderboard.json")
 const MAX_ENTRIES = 10
+const KV_KEY = "game:leaderboard"
+
+const hasKv = () => !!process.env.KV_REST_API_URL || !!process.env.UPSTASH_REDIS_REST_URL
+
+const normalizeEntries = async (data: any) => {
+  if (!Array.isArray(data)) return [] as LeaderboardEntry[]
+  let hasMissing = false
+  const normalized = data.map((entry, index) => {
+    const score = Number(entry?.score) || 0
+    const name = typeof entry?.name === "string" ? entry.name : "Anonymous"
+    const ts = Number.isFinite(entry?.ts) ? Number(entry.ts) : Date.now() + index
+    if (!Number.isFinite(entry?.ts)) hasMissing = true
+    return { score, name, ts }
+  })
+  if (hasMissing) {
+    await writeLeaderboard(normalized)
+  }
+  return normalized
+}
 
 export async function readLeaderboard(): Promise<LeaderboardEntry[]> {
   try {
-    const raw = await fs.readFile(FILE_PATH, "utf8")
-    const data = JSON.parse(raw)
-    if (!Array.isArray(data)) return []
-    let hasMissing = false
-    const normalized = data.map((entry, index) => {
-      const score = Number(entry?.score) || 0
-      const name = typeof entry?.name === "string" ? entry.name : "Anonymous"
-      const ts = Number.isFinite(entry?.ts) ? Number(entry.ts) : Date.now() + index
-      if (!Number.isFinite(entry?.ts)) hasMissing = true
-      return { score, name, ts }
-    })
-    if (hasMissing) {
-      await writeLeaderboard(normalized)
+    if (hasKv()) {
+      const data = await kv.get(KV_KEY)
+      return await normalizeEntries(data)
     }
-    return normalized
+    const raw = await fs.readFile(FILE_PATH, "utf8")
+    return await normalizeEntries(JSON.parse(raw))
   } catch {
     return []
   }
 }
 
 export async function writeLeaderboard(entries: LeaderboardEntry[]) {
+  if (hasKv()) {
+    await kv.set(KV_KEY, entries)
+    return
+  }
   await fs.mkdir(path.dirname(FILE_PATH), { recursive: true })
   await fs.writeFile(FILE_PATH, JSON.stringify(entries, null, 2), "utf8")
 }
