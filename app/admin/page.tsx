@@ -878,8 +878,6 @@ export default function AdminPanel() {
       loadFeaturedOverride()
       loadFeaturedDescription()
       loadFeaturedVideoOverride()
-      loadFeaturedVideoListOverride()
-      loadFeaturedCarousel()
       loadFeaturedTitleStyle()
       loadFeaturedTitleOverride()
       loadUploadedFonts()
@@ -1166,213 +1164,244 @@ export default function AdminPanel() {
           ))}
         </div>
 
-                {activeTab === "featured" && (
-        <section id="tab-panel-featured" role="tabpanel" aria-labelledby="tab-featured" className="mb-12">
-          <h2 className="text-xl font-semibold mb-4">Featured Video Editor</h2>
-          <div className="bg-black rounded-lg p-6 border border-zinc-800 space-y-6">
-            <div className="grid lg:grid-cols-[1.2fr,1fr] gap-6">
-              <div className="space-y-4">
-                <div className="relative aspect-video bg-black border border-zinc-800 rounded-lg overflow-hidden">
-                  {featuredCarouselItems[featuredCarouselIndex]?.thumbnailUrl ? (
-                    <img
-                      src={featuredCarouselItems[featuredCarouselIndex]?.thumbnailUrl}
-                      alt="Featured thumbnail"
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-zinc-900" />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="px-6">
-                    <button
-                      type="button"
-                      onClick={() => setIsFontEditorOpen((prev) => !prev)}
-                      className="text-left text-white uppercase tracking-wide font-bold leading-[1.1] max-w-[70%] line-clamp-2"
-                      style={{
-                        fontFamily: previewFontFamily || "inherit",
-                        fontSize: `${Number.parseInt(featuredTitleSize || "", 10) ||
-                          savedFeaturedTitleStyle?.fontSizePx ||
-                          48}px`,
-                        minHeight: "2.2em",
-                      }}
-                    >
-                      {featuredCarouselItems[featuredCarouselIndex]?.title || "TITLE"}
-                    </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Button
-                    variant="secondary"
-                    onClick={() =>
-                      setFeaturedCarouselIndex((prev) => (prev + featuredCarouselItems.length - 1) % 5)
-                    }
-                  >
-                    Prev
-                  </Button>
-                  <div className="text-sm text-gray-400">
-                    {featuredCarouselIndex + 1} / 5
-                  </div>
-                  <Button
-                    variant="secondary"
-                    onClick={() => setFeaturedCarouselIndex((prev) => (prev + 1) % 5)}
-                  >
-                    Next
-                  </Button>
-                </div>
-
-                <div className="flex gap-2">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <button
-                      key={`featured-slot-${index}`}
-                      type="button"
-                      onClick={() => setFeaturedCarouselIndex(index)}
-                      className={`flex-1 rounded-md border px-3 py-2 text-xs font-semibold ${
-                        featuredCarouselIndex === index
-                          ? "border-red-600 text-red-400"
-                          : "border-zinc-700 text-gray-400"
-                      }`}
-                    >
-                      Slot {index + 1}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-white">YouTube link or video ID</Label>
-                  <Input
-                    value={featuredCarouselItems[featuredCarouselIndex]?.videoId || ""}
-                    onChange={(e) => updateFeaturedCarouselItem(featuredCarouselIndex, { videoId: e.target.value })}
-                    className="bg-black border-zinc-700 text-white"
-                    placeholder="https://www.youtube.com/watch?v=..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-white">Title</Label>
-                  <Input
-                    value={featuredCarouselItems[featuredCarouselIndex]?.title || ""}
-                    onChange={(e) => updateFeaturedCarouselItem(featuredCarouselIndex, { title: e.target.value })}
-                    className="bg-black border-zinc-700 text-white"
-                    placeholder="TITLE"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-white">Description</Label>
-                  <textarea
-                    value={featuredCarouselItems[featuredCarouselIndex]?.description || ""}
-                    onChange={(e) => updateFeaturedCarouselItem(featuredCarouselIndex, { description: e.target.value })}
-                    className="w-full min-h-[120px] rounded-md bg-black border border-zinc-700 text-white p-3 text-sm"
-                    placeholder="Description..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-white">Thumbnail URL</Label>
-                  <Input
-                    value={featuredCarouselItems[featuredCarouselIndex]?.thumbnailUrl || ""}
-                    onChange={(e) => updateFeaturedCarouselItem(featuredCarouselIndex, { thumbnailUrl: e.target.value })}
-                    className="bg-black border-zinc-700 text-white"
-                    placeholder="https://..."
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    onClick={handleSaveFeaturedCarousel}
-                    disabled={isSavingFeaturedCarousel}
-                    className="bg-red-600 hover:bg-red-700 flex-1"
-                  >
-                    {isSavingFeaturedCarousel ? "Saving..." : "Save Carousel"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {isFontEditorOpen && (
-              <div className="mt-6 rounded-lg border border-red-600/40 bg-black p-4 space-y-4">
-                <div className="text-sm font-semibold text-red-500 uppercase tracking-[0.2em]">Title Font</div>
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label className="text-white">Upload font file (ttf, otf, woff, woff2)</Label>
-                    <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-black px-3 py-2">
-                      <input
-                        id="featured-title-font-file-inline"
-                        type="file"
-                        accept=".ttf,.otf,.woff,.woff2"
-                        className="hidden"
-                        onChange={(e) => setFontUploadFile(e.target.files?.[0] ?? null)}
+        {activeTab === "featured" && (
+          <section id="tab-panel-featured" role="tabpanel" aria-labelledby="tab-featured" className="mb-12">
+            <h2 className="text-xl font-semibold mb-4">Featured Video Editor</h2>
+            <div className="bg-black rounded-lg p-6 border border-zinc-800 space-y-6">
+              <div className="grid lg:grid-cols-[1.1fr,1fr] gap-6">
+                <div className="space-y-4">
+                  <div className="relative aspect-video bg-black border border-zinc-800 rounded-lg overflow-hidden">
+                    {featuredOverride?.thumbnailUrl ? (
+                      <img
+                        src={featuredOverride.thumbnailUrl}
+                        alt="Featured thumbnail"
+                        className="absolute inset-0 h-full w-full object-cover"
                       />
-                      <label
-                        htmlFor="featured-title-font-file-inline"
-                        className="cursor-pointer rounded-md bg-zinc-700 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-600"
-                      >
-                        Choose File
-                      </label>
-                      <span className="text-sm text-gray-400 truncate">
-                        {fontUploadFile?.name ?? "No file chosen"}
-                      </span>
-                    </div>
-                    <Button onClick={handleUploadFont} disabled={isUploadingFont} className="bg-red-600 hover:bg-red-700">
-                      {isUploadingFont ? "Uploading..." : "Upload Font"}
-                    </Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-white">Select uploaded font</Label>
-                    <select
-                      value={selectedFontName}
-                      onChange={(e) => handleSelectFont(e.target.value)}
-                      className="w-full bg-black border border-zinc-700 text-white rounded-md px-3 py-2 text-sm"
-                    >
-                      <option value="">-- Select a font --</option>
-                      {uploadedFonts.map((font) => (
-                        <option key={font.fileName} value={font.name}>
-                          {font.name}
-                        </option>
-                      ))}
-                    </select>
-                    {selectedFontName && (
-                      <p className="text-xs text-gray-400">Using uploaded font: {selectedFontName}</p>
+                    ) : (
+                      <div className="absolute inset-0 bg-zinc-900" />
                     )}
-
-                    <div className="space-y-2 pt-3">
-                      <Label className="text-white">Title Size</Label>
-                      <input
-                        type="range"
-                        min={24}
-                        max={200}
-                        value={Number.parseInt(featuredTitleSize || "", 10) || savedFeaturedTitleStyle?.fontSizePx || 48}
-                        onChange={(e) => setFeaturedTitleSize(e.target.value)}
-                        className="w-full"
-                      />
-                      <div className="text-xs text-gray-400">
-                        {Number.parseInt(featuredTitleSize || "", 10) || savedFeaturedTitleStyle?.fontSizePx || 48}px
+                    <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="px-6">
+                        <button
+                          type="button"
+                          onClick={() => setIsFontEditorOpen((prev) => !prev)}
+                          className="text-left text-white uppercase tracking-wide font-bold leading-[1.1] max-w-[70%] line-clamp-2"
+                          style={{
+                            fontFamily: previewFontFamily || "inherit",
+                            fontSize: `${Number.parseInt(featuredTitleSize || "", 10) ||
+                              savedFeaturedTitleStyle?.fontSizePx ||
+                              48}px`,
+                            minHeight: "2.2em",
+                          }}
+                        >
+                          {featuredTitleOverride || "TITLE"}
+                        </button>
                       </div>
                     </div>
                   </div>
+                  <div className="text-xs text-gray-400">
+                    Current video: {savedFeaturedVideoId ?? "Auto (most recent upload)"}
+                  </div>
                 </div>
 
-                <div className="flex gap-3">
-                  <Button
-                    onClick={handleSaveFeaturedTitleStyle}
-                    disabled={isSavingFeaturedTitleStyle}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    {isSavingFeaturedTitleStyle ? "Saving..." : "Save Title Style"}
-                  </Button>
-                  {savedFeaturedTitleStyle && (
-                    <Button onClick={handleClearFeaturedTitleStyle} variant="secondary" disabled={isSavingFeaturedTitleStyle}>
-                      Clear
-                    </Button>
-                  )}
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <Label className="text-white">Featured video override (YouTube link or ID)</Label>
+                    <Input
+                      value={featuredVideoUrl}
+                      onChange={(e) => setFeaturedVideoUrl(e.target.value)}
+                      className="bg-black border-zinc-700 text-white"
+                      placeholder="https://www.youtube.com/watch?v=..."
+                    />
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={handleSaveFeaturedVideo}
+                        disabled={isSavingFeaturedVideo}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        {isSavingFeaturedVideo ? "Saving..." : "Save Video"}
+                      </Button>
+                      {savedFeaturedVideoId && (
+                        <Button
+                          onClick={handleClearFeaturedVideo}
+                          variant="secondary"
+                          disabled={isSavingFeaturedVideo}
+                        >
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white">Featured title override</Label>
+                    <Input
+                      value={featuredTitleOverride}
+                      onChange={(e) => setFeaturedTitleOverride(e.target.value)}
+                      className="bg-black border-zinc-700 text-white"
+                      placeholder="TITLE"
+                    />
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={handleSaveFeaturedTitleOverride}
+                        disabled={isSavingFeaturedTitleOverride}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        {isSavingFeaturedTitleOverride ? "Saving..." : "Save Title"}
+                      </Button>
+                      {savedFeaturedTitleOverride && (
+                        <Button
+                          onClick={handleClearFeaturedTitleOverride}
+                          variant="secondary"
+                          disabled={isSavingFeaturedTitleOverride}
+                        >
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white">Featured thumbnail URL</Label>
+                    <Input
+                      value={featuredThumbUrl}
+                      onChange={(e) => setFeaturedThumbUrl(e.target.value)}
+                      className="bg-black border-zinc-700 text-white"
+                      placeholder="https://..."
+                    />
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={handleSaveFeaturedOverride}
+                        disabled={isSavingFeatured}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        {isSavingFeatured ? "Saving..." : "Save Thumbnail"}
+                      </Button>
+                      {featuredOverride?.thumbnailUrl && (
+                        <Button onClick={handleClearFeaturedOverride} variant="secondary" disabled={isSavingFeatured}>
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-3 pt-2">
+                      <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-black px-3 py-2">
+                        <input
+                          id="featured-thumb-file"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => setFeaturedThumbFile(e.target.files?.[0] ?? null)}
+                        />
+                        <label
+                          htmlFor="featured-thumb-file"
+                          className="cursor-pointer rounded-md bg-zinc-700 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-600"
+                        >
+                          Choose File
+                        </label>
+                        <span className="text-sm text-gray-400 truncate">
+                          {featuredThumbFile?.name ?? "No file chosen"}
+                        </span>
+                      </div>
+                      <Button
+                        onClick={handleUploadFeaturedThumb}
+                        disabled={isUploadingFeatured}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        {isUploadingFeatured ? "Uploading..." : "Upload Thumbnail"}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
-        </section>
+
+              {isFontEditorOpen && (
+                <div className="mt-6 rounded-lg border border-red-600/40 bg-black p-4 space-y-4">
+                  <div className="text-sm font-semibold text-red-500 uppercase tracking-[0.2em]">Title Font</div>
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label className="text-white">Upload font file (ttf, otf, woff, woff2)</Label>
+                      <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-black px-3 py-2">
+                        <input
+                          id="featured-title-font-file-inline"
+                          type="file"
+                          accept=".ttf,.otf,.woff,.woff2"
+                          className="hidden"
+                          onChange={(e) => setFontUploadFile(e.target.files?.[0] ?? null)}
+                        />
+                        <label
+                          htmlFor="featured-title-font-file-inline"
+                          className="cursor-pointer rounded-md bg-zinc-700 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-600"
+                        >
+                          Choose File
+                        </label>
+                        <span className="text-sm text-gray-400 truncate">
+                          {fontUploadFile?.name ?? "No file chosen"}
+                        </span>
+                      </div>
+                      <Button onClick={handleUploadFont} disabled={isUploadingFont} className="bg-red-600 hover:bg-red-700">
+                        {isUploadingFont ? "Uploading..." : "Upload Font"}
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-white">Select uploaded font</Label>
+                      <select
+                        value={selectedFontName}
+                        onChange={(e) => handleSelectFont(e.target.value)}
+                        className="w-full bg-black border border-zinc-700 text-white rounded-md px-3 py-2 text-sm"
+                      >
+                        <option value="">-- Select a font --</option>
+                        {uploadedFonts.map((font) => (
+                          <option key={font.fileName} value={font.name}>
+                            {font.name}
+                          </option>
+                        ))}
+                      </select>
+                      {selectedFontName && (
+                        <p className="text-xs text-gray-400">Using uploaded font: {selectedFontName}</p>
+                      )}
+
+                      <div className="space-y-2 pt-3">
+                        <Label className="text-white">Title Size</Label>
+                        <input
+                          type="range"
+                          min={24}
+                          max={200}
+                          value={Number.parseInt(featuredTitleSize || "", 10) || savedFeaturedTitleStyle?.fontSizePx || 48}
+                          onChange={(e) => setFeaturedTitleSize(e.target.value)}
+                          className="w-full"
+                        />
+                        <div className="text-xs text-gray-400">
+                          {Number.parseInt(featuredTitleSize || "", 10) || savedFeaturedTitleStyle?.fontSizePx || 48}px
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleSaveFeaturedTitleStyle}
+                      disabled={isSavingFeaturedTitleStyle}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      {isSavingFeaturedTitleStyle ? "Saving..." : "Save Title Style"}
+                    </Button>
+                    {savedFeaturedTitleStyle && (
+                      <Button
+                        onClick={handleClearFeaturedTitleStyle}
+                        variant="secondary"
+                        disabled={isSavingFeaturedTitleStyle}
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
         )}
 {activeTab === "more" && (
         <section id="tab-panel-more" role="tabpanel" aria-labelledby="tab-more" className="mb-12">

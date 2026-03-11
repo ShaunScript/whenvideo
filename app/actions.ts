@@ -31,7 +31,7 @@ async function loadFreshData(maxResults: number, moreVideoIds: string[]) {
   const tvData = await fetchChannelVideos(apiKey, maxResults, tvChannelId)
   const tvVideos = filterLongVideos(tvData.videos)
 
-  const needMoreData = await fetchChannelVideosByHandle(apiKey, "needmoredoza", maxResults)
+  const needMoreData = await fetchChannelVideosByHandle(apiKey, "@needmoredoza", maxResults)
   const needMoreLongs = filterLongVideos(needMoreData.videos)
 
   const moreVids = moreVideoIds.length > 0 ? await fetchVideosByIds(apiKey, moreVideoIds) : []
@@ -40,8 +40,18 @@ async function loadFreshData(maxResults: number, moreVideoIds: string[]) {
   let featuredVideo = featuredOverride?.videoId ? await fetchVideoById(apiKey, featuredOverride.videoId) : null
 
   if (!featuredVideo) {
-    const primaryFeatured = longs[0] ?? primary.videos[0] ?? null
-    const needMoreFeatured = needMoreLongs[0] ?? needMoreData.videos[0] ?? null
+    const getMostRecentVideo = (videos: typeof primary.videos) => {
+      return videos.reduce((latest, current) => {
+        if (!current) return latest
+        if (!latest) return current
+        const currentTime = new Date(current.publishedAt).getTime() || 0
+        const latestTime = new Date(latest.publishedAt).getTime() || 0
+        return currentTime >= latestTime ? current : latest
+      }, null as (typeof primary.videos)[number] | null)
+    }
+
+    const primaryFeatured = getMostRecentVideo(primary.videos)
+    const needMoreFeatured = getMostRecentVideo(needMoreData.videos)
 
     featuredVideo =
       !primaryFeatured && !needMoreFeatured

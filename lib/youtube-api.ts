@@ -131,9 +131,26 @@ export async function fetchChannelVideosByHandle(
   handle: string,
   maxResults = 10,
 ): Promise<YouTubeChannelData> {
-  // Resolve handle to channelId via search
+  const normalizedHandle = (handle || "").trim().replace(/^@/, "")
+  if (!normalizedHandle) {
+    throw new Error("Channel handle is empty")
+  }
+  // Prefer exact handle lookup via channels?forHandle
+  const handleRes = await fetch(
+    `https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails&forHandle=${encodeURIComponent(normalizedHandle)}&key=${apiKey}`,
+    { cache: "no-store" },
+  )
+  if (handleRes.ok) {
+    const handleData = await handleRes.json()
+    const channelId = handleData?.items?.[0]?.id
+    if (channelId) {
+      return fetchChannelVideos(apiKey, maxResults, channelId)
+    }
+  }
+
+  // Fallback: resolve handle to channelId via search
   const searchRes = await fetch(
-    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(handle)}&maxResults=1&key=${apiKey}`,
+    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(normalizedHandle)}&maxResults=1&key=${apiKey}`,
     { cache: "no-store" },
   )
   if (!searchRes.ok) {
@@ -142,7 +159,7 @@ export async function fetchChannelVideosByHandle(
   }
   const searchData = await searchRes.json()
   const channelId = searchData?.items?.[0]?.snippet?.channelId
-  if (!channelId) throw new Error(`Channel not found for handle ${handle}`)
+  if (!channelId) throw new Error(`Channel not found for handle ${normalizedHandle}`)
 
   return fetchChannelVideos(apiKey, maxResults, channelId)
 }
