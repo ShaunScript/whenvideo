@@ -63,6 +63,8 @@ async function loadFreshData(maxResults: number, moreVideoIds: string[]) {
     tvVideos,
     moreVideos: moreVids,
     featuredVideo,
+    secondaryLongVideos: needMoreLongs,
+    secondaryChannelData: needMoreData,
   }
 }
 

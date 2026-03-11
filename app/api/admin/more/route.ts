@@ -2,7 +2,14 @@
 import { NextResponse } from "next/server"
 import moreVideosJson from "@/data/more-videos.json"
 import { getVideosByIds } from "@/lib/youtube-api"
-import { listMoreRows, addYouTubeIds, addUploadVideo, removeMoreVideo, clearMoreVideos } from "@/lib/more-db"
+import {
+  listMoreRows,
+  addYouTubeIds,
+  addUploadVideo,
+  removeMoreVideo,
+  clearMoreVideos,
+  updateMoreCategories,
+} from "@/lib/more-db"
 
 export const runtime = "nodejs"
 
@@ -66,6 +73,7 @@ function normalizeVideo(v: any) {
     channelId: v.channelId ?? "",
     source: v.source ?? (v.videoUrl ? "upload" : "youtube"),
     videoUrl: v.videoUrl ?? v.url ?? undefined,
+    categories: Array.isArray(v.categories) ? v.categories : [],
   }
 }
 
@@ -97,11 +105,14 @@ export async function GET(request: Request) {
     const rows = await listMoreRows()
     const uploadRows = rows.filter((r) => r.source === "upload")
     const dbYouTubeIds = rows.filter((r) => r.source === "youtube").map((r) => r.video_id)
+    const categoriesById = new Map<string, string[]>(rows.map((r) => [r.video_id, r.categories ?? []]))
 
     const allYouTubeIds = Array.from(new Set([...baseIds, ...dbYouTubeIds]))
 
     const fetched = allYouTubeIds.length ? await getVideosByIds(apiKey, allYouTubeIds) : []
-    const youtubeVideos = fetched.map((v) => normalizeVideo({ ...v, source: "youtube" }))
+    const youtubeVideos = fetched.map((v) =>
+      normalizeVideo({ ...v, source: "youtube", categories: categoriesById.get(v.id) ?? [] }),
+    )
 
     const uploadVideos = uploadRows.map((r) =>
       normalizeVideo({
@@ -114,6 +125,7 @@ export async function GET(request: Request) {
         viewCount: r.view_count ?? "0",
         commentCount: r.comment_count ?? 0,
         duration: r.duration ?? "",
+        categories: r.categories ?? [],
         source: "upload",
         videoUrl: r.video_url ?? undefined,
         addedAt: r.added_at,
@@ -200,7 +212,20 @@ export async function DELETE(request: Request) {
   }
 }
 
-export async function PATCH() {
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json()
+    const videoId = body?.videoId
+    const categories = Array.isArray(body?.categories) ? body.categories : []
+
+    if (videoId) {
+      await updateMoreCategories(videoId, categories)
+      return NextResponse.json({ success: true, message: "Categories updated", categories })
+    }
+  } catch {
+    // ignore JSON parse errors and fall through to clear
+  }
+
   await clearMoreVideos()
   return NextResponse.json({ success: true, message: "More cleared (database)" })
 }

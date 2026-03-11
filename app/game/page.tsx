@@ -38,21 +38,6 @@ export default function GamePage() {
 
   const loadHighScore = React.useCallback(async () => {
     try {
-      const res = await fetch("/api/game/highscore", { cache: "no-store" })
-      if (res.ok) {
-        const json = await res.json()
-        const data = json?.data
-        if (data) {
-          setHighScore(data.score || 0)
-          setHighScoreName(data.name || "")
-          return
-        }
-      }
-    } catch (err) {
-      console.error("Failed to load high score from API:", err)
-    }
-
-    try {
       const savedData = localStorage.getItem("flappyHighScoreData")
       if (savedData) {
         const parsed = JSON.parse(savedData)
@@ -71,10 +56,27 @@ export default function GamePage() {
         const json = await res.json()
         const data = Array.isArray(json?.data) ? json.data : []
         setLeaderboard(data)
+        try {
+          localStorage.setItem("flappyLeaderboardLocal", JSON.stringify(data))
+        } catch {
+          // ignore storage errors
+        }
         return
       }
     } catch (err) {
       console.error("Failed to load leaderboard from API:", err)
+    }
+    try {
+      const cached = localStorage.getItem("flappyLeaderboardLocal")
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed)) {
+          setLeaderboard(parsed)
+          return
+        }
+      }
+    } catch {
+      // ignore storage errors
     }
     setLeaderboard([])
   }, [])
@@ -108,16 +110,6 @@ export default function GamePage() {
   const persistHighScore = async (score: number, name: string) => {
     const payload = { score, name }
     try {
-      await fetch("/api/game/highscore", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-    } catch (err) {
-      console.error("Failed to save high score to API:", err)
-    }
-
-    try {
       localStorage.setItem("flappyHighScoreData", JSON.stringify(payload))
     } catch {
       // ignore storage errors
@@ -128,14 +120,40 @@ export default function GamePage() {
     async (scoreValue: number, name: string) => {
       if (scoreValue <= 0) return
       try {
-        await fetch("/api/game/leaderboard", {
+        const res = await fetch("/api/game/leaderboard", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ score: scoreValue, name }),
         })
+        if (res.ok) {
+          const json = await res.json()
+          const data = Array.isArray(json?.data) ? json.data : []
+          if (data.length > 0) {
+            setLeaderboard(data)
+            try {
+              localStorage.setItem("flappyLeaderboardLocal", JSON.stringify(data))
+            } catch {
+              // ignore storage errors
+            }
+            return
+          }
+        }
         await loadLeaderboard()
       } catch (err) {
         console.error("Failed to submit leaderboard score:", err)
+        const entry = { name, score: scoreValue, ts: Date.now() }
+        setLeaderboard((prev) => {
+          const merged = [entry, ...prev]
+            .filter((item) => Number.isFinite(item.score) && item.score > 0)
+            .sort((a, b) => b.score - a.score || b.ts - a.ts)
+            .slice(0, 10)
+          try {
+            localStorage.setItem("flappyLeaderboardLocal", JSON.stringify(merged))
+          } catch {
+            // ignore storage errors
+          }
+          return merged
+        })
       }
     },
     [loadLeaderboard],
@@ -216,15 +234,15 @@ export default function GamePage() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    const GRAVITY = 540
-    const JUMP_STRENGTH = -300
+    const GRAVITY = 620
+    const JUMP_STRENGTH = -340
     const PIPE_WIDTH = 50
-    const PIPE_GAP = 180
-    const PIPE_SPEED = 120
-    const SPEED_INCREMENT = 6
-    const MAX_SPEED = 360
+    const PIPE_GAP = 170
+    const PIPE_SPEED = 170
+    const SPEED_INCREMENT = 10
+    const MAX_SPEED = 480
     const BIRD_SIZE = 30
-    const PIPE_SPACING = 350
+    const PIPE_SPACING = 300
 
     const resetGame = () => {
       const gapY1 = Math.random() * (canvas.height - PIPE_GAP - 100) + 50

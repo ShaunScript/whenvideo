@@ -109,7 +109,7 @@ export default function UserInventoryPage({ params }: { params: { userId: string
         <div className="flex flex-col items-center gap-3 mb-6 text-center">
           <div>
             <h1 className="text-4xl sm:text-5xl font-medium tracking-[0.04em] uppercase">
-              {row ? `${row.userName} ` : ""}Inventory
+              {row ? row.userName : ""}
             </h1>
           </div>
         </div>

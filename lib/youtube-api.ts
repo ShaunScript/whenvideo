@@ -16,6 +16,7 @@ export interface YouTubeVideo {
   commentCount: number
   channelTitle?: string
   channelId?: string
+  categories?: string[]
 }
 
 export interface YouTubeChannelData {

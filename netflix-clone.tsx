@@ -83,9 +83,14 @@ export default function Home() {
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [youtubeData, setYoutubeData] = React.useState<YouTubeChannelData | null>(null)
+  const [secondaryChannelData, setSecondaryChannelData] = React.useState<YouTubeChannelData | null>(null)
+  const [featuredOverrideVideos, setFeaturedOverrideVideos] = React.useState<YouTubeVideo[] | null>(null)
+  const [featuredCarouselVideos, setFeaturedCarouselVideos] = React.useState<YouTubeVideo[] | null>(null)
   const [longVideos, setLongVideos] = React.useState<YouTubeVideo[] | null>(null)
   const [tvVideos, setTvVideos] = React.useState<YouTubeVideo[] | null>(null)
-  const [featuredVideo, setFeaturedVideo] = React.useState<YouTubeVideo | null>(null)
+  const [fallbackFeaturedVideo, setFallbackFeaturedVideo] = React.useState<YouTubeVideo | null>(null)
+  const [featuredIndex, setFeaturedIndex] = React.useState(0)
+  const [featuredThumbOverride, setFeaturedThumbOverride] = React.useState<string | null>(null)
   const [featuredDescription, setFeaturedDescription] = React.useState("")
   const [featuredTitleOverride, setFeaturedTitleOverride] = React.useState("")
   const [featuredTitleStyle, setFeaturedTitleStyle] = React.useState<{
@@ -93,6 +98,9 @@ export default function Home() {
     fontSizePx: number
     fontUrl?: string | null
   } | null>(null)
+  const [nextFeaturedIndex, setNextFeaturedIndex] = React.useState<number | null>(null)
+  const transitionTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cycleTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
   const [apiError, setApiError] = React.useState<string | null>(null)
   const [debugInfo, setDebugInfo] = React.useState<string | null>(null)
@@ -166,9 +174,11 @@ export default function Home() {
 
     if (moreVideos) {
       moreVideos.forEach((video) => {
+        const categoryText = normalizeText((video.categories ?? []).join(" "))
         if (
           normalizeText(video.title).includes(query) ||
-          (video.channelTitle && normalizeText(video.channelTitle).includes(query))
+          (video.channelTitle && normalizeText(video.channelTitle).includes(query)) ||
+          (categoryText && categoryText.includes(query))
         ) {
           results.push({ video, category: "More" })
         }
@@ -228,15 +238,68 @@ export default function Home() {
         setYoutubeData(result.channelData)
         setLongVideos(result.longVideos)
         setTvVideos(result.tvVideos)
-        setFeaturedVideo(result.featuredVideo)
+        setSecondaryChannelData(result.secondaryChannelData ?? null)
+        setFallbackFeaturedVideo(result.featuredVideo ?? null)
+        try {
+          const carouselRes = await fetch("/api/admin/more/featured-carousel", { cache: "no-store" })
+          const carouselJson = await carouselRes.json()
+          const items = Array.isArray(carouselJson?.data?.items) ? carouselJson.data.items : []
+          if (items.length > 0) {
+            const ids = items.map((item: any) => item?.videoId).filter(Boolean)
+            if (ids.length > 0) {
+              const metaRes = await fetch(`/api/admin/more?videoIds=${encodeURIComponent(JSON.stringify(ids))}`, {
+                cache: "no-store",
+              })
+              const metaJson = await metaRes.json()
+              const metaVideos: YouTubeVideo[] = Array.isArray(metaJson?.videos) ? metaJson.videos : []
+              const videoMap = new Map(metaVideos.map((video) => [video.id, video]))
+              const ordered = items
+                .map((item: any) => {
+                  const base = videoMap.get(item.videoId)
+                  if (!base) return null
+                  return {
+                    ...base,
+                    title: item.title || base.title,
+                    description: item.description || base.description,
+                    thumbnail: item.thumbnailUrl || base.thumbnail,
+                  }
+                })
+                .filter(Boolean) as YouTubeVideo[]
+              setFeaturedCarouselVideos(ordered)
+            } else {
+              setFeaturedCarouselVideos(null)
+            }
+          } else {
+            setFeaturedCarouselVideos(null)
+          }
+        } catch {
+          setFeaturedCarouselVideos(null)
+        }
+        try {
+          const featuredRes = await fetch("/api/admin/more/featured-videos", { cache: "no-store" })
+          const featuredJson = await featuredRes.json()
+          const overrideIds = Array.isArray(featuredJson?.data?.videoIds) ? featuredJson.data.videoIds : []
+          if (overrideIds.length > 0) {
+            const metaRes = await fetch(`/api/admin/more?videoIds=${encodeURIComponent(JSON.stringify(overrideIds))}`, {
+              cache: "no-store",
+            })
+            const metaJson = await metaRes.json()
+            const metaVideos: YouTubeVideo[] = Array.isArray(metaJson?.videos) ? metaJson.videos : []
+            const videoMap = new Map(metaVideos.map((video) => [video.id, video]))
+            const ordered = overrideIds.map((id: string) => videoMap.get(id)).filter(Boolean) as YouTubeVideo[]
+            setFeaturedOverrideVideos(ordered)
+          } else {
+            setFeaturedOverrideVideos(null)
+          }
+        } catch {
+          setFeaturedOverrideVideos(null)
+        }
         try {
           const res = await fetch("/api/admin/more/featured-thumbmail", { cache: "no-store" })
           const json = await res.json()
           const override = json?.data
         
-          if (override?.thumbnailUrl && result.featuredVideo) {
-            setFeaturedVideo({ ...result.featuredVideo, thumbnail: override.thumbnailUrl })
-          }
+          setFeaturedThumbOverride(override?.thumbnailUrl ?? null)
         } catch {}
         try {
           const descriptionRes = await fetch("/api/admin/more/featured-description", { cache: "no-store" })
@@ -284,6 +347,7 @@ export default function Home() {
           videoUrl: `https://www.youtube.com/watch?v=${video.id}`,
           starRating: 4.5,
           commentCount: video.commentCount || 0,
+          categories: video.categories ?? [],
         }))
 
         const sortedMoreVideos = convertedMoreVideos.sort((a, b) => {
@@ -390,6 +454,37 @@ export default function Home() {
     loadData()
   }, [])
 
+  const featuredCandidates = React.useMemo(() => {
+    const isLong = (video: YouTubeVideo) => (video.durationSeconds ?? 0) > 300
+
+    if (featuredCarouselVideos && featuredCarouselVideos.length > 0) {
+      const carouselLong = featuredCarouselVideos.filter(isLong).slice(0, 5)
+      if (carouselLong.length > 0) return carouselLong
+    }
+
+    if (featuredOverrideVideos && featuredOverrideVideos.length > 0) {
+      const overrideLong = featuredOverrideVideos.filter(isLong).slice(0, 5)
+      if (overrideLong.length > 0) return overrideLong
+    }
+
+    const combined = [
+      ...(youtubeData?.videos ?? []),
+      ...(secondaryChannelData?.videos ?? []),
+    ]
+    const deduped = Array.from(new Map(combined.map((v) => [v.id, v])).values())
+    return deduped
+      .filter(isLong)
+      .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+      .slice(0, 5)
+  }, [featuredCarouselVideos, featuredOverrideVideos, youtubeData, secondaryChannelData])
+
+  const activeFeaturedVideo = featuredCandidates[featuredIndex] ?? fallbackFeaturedVideo
+
+  React.useEffect(() => {
+    if (featuredCandidates.length === 0) return
+    setFeaturedIndex(0)
+  }, [featuredCandidates])
+
   React.useEffect(() => {
     const debug = searchParams.get("debug") === "1"
     if (!debug || !apiError) return
@@ -459,10 +554,10 @@ export default function Home() {
   }, [isSearchExpanded])
 
   React.useEffect(() => {
-    if (!featuredVideo?.publishedAt) return
+    if (!activeFeaturedVideo?.publishedAt) return
 
     const updateTimer = () => {
-      const uploadDate = new Date(featuredVideo.publishedAt)
+      const uploadDate = new Date(activeFeaturedVideo.publishedAt)
       const now = new Date()
       const diffMs = now.getTime() - uploadDate.getTime()
 
@@ -479,7 +574,26 @@ export default function Home() {
     const interval = setInterval(updateTimer, 1000)
 
     return () => clearInterval(interval)
-  }, [featuredVideo?.publishedAt])
+  }, [activeFeaturedVideo?.publishedAt])
+
+  React.useEffect(() => {
+    if (featuredCandidates.length <= 1) return
+    if (nextFeaturedIndex !== null) return
+
+    cycleTimeoutRef.current = setTimeout(() => {
+      const nextIndex = (featuredIndex + 1) % featuredCandidates.length
+      setNextFeaturedIndex(nextIndex)
+      transitionTimeoutRef.current = setTimeout(() => {
+        setFeaturedIndex(nextIndex)
+        setNextFeaturedIndex(null)
+      }, 1800)
+    }, 10000)
+
+    return () => {
+      if (cycleTimeoutRef.current) clearTimeout(cycleTimeoutRef.current)
+      if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current)
+    }
+  }, [featuredCandidates.length, featuredIndex, nextFeaturedIndex])
 
   React.useEffect(() => {
     const handleVisibilityChange = async () => {
@@ -500,6 +614,7 @@ export default function Home() {
           videoUrl: `https://www.youtube.com/watch?v=${video.id}`,
           starRating: 4.5,
           commentCount: video.commentCount || 0,
+          categories: video.categories ?? [],
         }))
 
         const sortedMoreVideos = convertedMoreVideos.sort((a, b) => {
@@ -522,7 +637,20 @@ export default function Home() {
 
   const featuredFontFamily = featuredTitleStyle?.fontFamily
   const featuredFontUrl = featuredTitleStyle?.fontUrl
-  const featuredTitleText = featuredTitleOverride || featuredVideo?.title || ""
+  const shouldUseFeaturedOverrides = featuredCandidates.length <= 1
+  const featuredTitleText = shouldUseFeaturedOverrides
+    ? featuredTitleOverride || activeFeaturedVideo?.title || ""
+    : activeFeaturedVideo?.title || ""
+  const featuredThumbnail = shouldUseFeaturedOverrides
+    ? featuredThumbOverride || activeFeaturedVideo?.thumbnail || "/placeholder.svg"
+    : activeFeaturedVideo?.thumbnail || "/placeholder.svg"
+  const featuredDescriptionText = shouldUseFeaturedOverrides
+    ? featuredDescription || defaultFeaturedDescription
+    : activeFeaturedVideo?.description || defaultFeaturedDescription
+  const isFeaturedTransitioning = nextFeaturedIndex !== null
+  const nextFeaturedVideo = nextFeaturedIndex !== null ? featuredCandidates[nextFeaturedIndex] : null
+  const nextFeaturedThumbnail = nextFeaturedVideo?.thumbnail || "/placeholder.svg"
+  const nextFeaturedTitle = nextFeaturedVideo?.title || "Next featured video"
   const fontFaceCss = featuredFontFamily && featuredFontUrl
     ? (() => {
         const safeFamily = featuredFontFamily.replace(/"/g, '\\"')
@@ -539,9 +667,68 @@ export default function Home() {
       })()
     : ""
 
+  const globalCss = `
+${fontFaceCss}
+@keyframes featuredPan {
+  0% {
+    transform: translate3d(4%, 0, 0) scale(1.06);
+  }
+  100% {
+    transform: translate3d(-4%, 0, 0) scale(1.06);
+  }
+}
+
+@keyframes featuredEnter {
+  0% {
+    opacity: 0;
+    transform: translate3d(6%, 0, 0) scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1.06);
+  }
+}
+
+@keyframes featuredExit {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1.06);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-6%, 0, 0) scale(1.06);
+  }
+}
+
+.featured-pan {
+  animation: featuredPan 10s linear forwards;
+  will-change: transform;
+}
+
+.featured-layer {
+  will-change: transform, opacity;
+}
+
+.featured-enter {
+  animation: featuredEnter 1.8s cubic-bezier(0.18, 0.95, 0.2, 1);
+}
+
+.featured-exit {
+  animation: featuredExit 1.8s cubic-bezier(0.18, 0.95, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .featured-enter,
+  .featured-exit,
+  .featured-pan {
+    animation: none;
+  }
+}
+  `
+
   return (
     <div className="min-h-screen bg-black text-white">
-      {fontFaceCss && <style jsx global>{fontFaceCss}</style>}
+      <style jsx global>{globalCss}</style>
       {/* Header */}
       <header
         className={`fixed top-0 z-50 w-full ${isMobileMenuOpen ? "" : "transition-all duration-300"} ${
@@ -575,27 +762,26 @@ export default function Home() {
                 href="/twitch-stats"
                 className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap"
               >
-                Leaderboard
+                Twitch Case
+              </Link>
+              <Link href="/socials" className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap">
+                Socials
               </Link>
 
             </nav>
           </div>
 
-          {featuredVideo && (
-            <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 group hidden sm:block">
-              <div className="flex items-center gap-0.5 sm:gap-1 text-white font-mono text-xs sm:text-sm lg:text-base tracking-wider bg-black/50 px-2 sm:px-2.5 lg:px-3 py-1 sm:py-1.5 rounded-lg border border-white/30">
-                <span className="font-bold">{String(timeUnits.days).padStart(2, "0")}</span>
-                <span className="text-white/70">:</span>
-                <span className="font-bold">{String(timeUnits.hours).padStart(2, "0")}</span>
-                <span className="text-white/70">:</span>
-                <span className="font-bold">{String(timeUnits.minutes).padStart(2, "0")}</span>
-                <span className="text-white/70">:</span>
-                <span className="font-bold">{String(timeUnits.seconds).padStart(2, "0")}</span>
-              </div>
-              {/* Tooltip */}
-              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-1.5 bg-black/60 text-white text-xs rounded-md border border-white/20 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
-                Days since the last upload
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-px w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-white/20" />
+          {activeFeaturedVideo && (
+            <div className="hidden lg:flex items-center">
+              <div
+                className="text-white uppercase font-black tracking-[0.08em] text-lg lg:text-xl"
+                style={{
+                  textShadow:
+                    "0 6px 10px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.35)",
+                }}
+                aria-label="March 2026"
+              >
+                March 2026
               </div>
             </div>
           )}
@@ -750,7 +936,13 @@ aria-label="Patreon"
               href="/twitch-stats"
               className="rounded-full bg-white/10 text-white text-xs font-semibold px-3 py-1.5 border border-white/10 hover:bg-white/20 transition"
             >
-              Twitch Leaderboard
+              Twitch Case
+            </Link>
+            <Link
+              href="/socials"
+              className="rounded-full bg-white/15 text-white text-xs font-semibold px-3 py-1.5 hover:bg-white/25 active:bg-white/30 transition border-0 focus-visible:outline-none focus-visible:ring-0"
+            >
+              Socials
             </Link>
           </div>
         </div>
@@ -864,17 +1056,32 @@ aria-label="Patreon"
       )}
 
       <section className="relative min-h-0 lg:h-screen flex items-start lg:items-center">
-        {featuredVideo && (
+        {activeFeaturedVideo && (
           <>
             {/* Desktop featured layout - only on lg and up */}
             <div className="hidden lg:block absolute inset-0">
-              <Image
-                src={featuredVideo.thumbnail || "/placeholder.svg"}
-                alt={featuredVideo.title}
-                fill
-                className="object-cover"
-                priority
-              />
+              <div className="absolute inset-0 featured-pan">
+                <Image
+                  key={activeFeaturedVideo.id}
+                  src={featuredThumbnail}
+                  alt={activeFeaturedVideo.title}
+                  fill
+                  className={`object-cover featured-layer ${isFeaturedTransitioning ? "featured-exit" : ""}`}
+                  priority
+                />
+              </div>
+              {isFeaturedTransitioning && nextFeaturedVideo && (
+                <div className="absolute inset-0 featured-pan">
+                  <Image
+                    key={`next-${nextFeaturedVideo.id}`}
+                    src={nextFeaturedThumbnail}
+                    alt={nextFeaturedTitle}
+                    fill
+                    className="object-cover featured-layer featured-enter"
+                    priority
+                  />
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-r from-black via-black/50 to-transparent" />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
             </div>
@@ -884,13 +1091,28 @@ aria-label="Patreon"
               <div className="relative w-full max-w-full mx-auto md:max-w-4xl rounded-xl overflow-hidden shadow-2xl">
                 {/* Card image */}
                 <div className="relative aspect-[4/5] md:aspect-video w-full">
-                  <Image
-                    src={featuredVideo.thumbnail || "/placeholder.svg"}
-                    alt={featuredVideo.title}
-                    fill
-                    className="object-cover"
-                    priority
-                  />
+                  <div className="absolute inset-0 featured-pan">
+                    <Image
+                      key={activeFeaturedVideo.id}
+                      src={featuredThumbnail}
+                      alt={activeFeaturedVideo.title}
+                      fill
+                      className={`object-cover featured-layer ${isFeaturedTransitioning ? "featured-exit" : ""}`}
+                      priority
+                    />
+                  </div>
+                  {isFeaturedTransitioning && nextFeaturedVideo && (
+                    <div className="absolute inset-0 featured-pan">
+                      <Image
+                        key={`next-mobile-${nextFeaturedVideo.id}`}
+                        src={nextFeaturedThumbnail}
+                        alt={nextFeaturedTitle}
+                        fill
+                        className="object-cover featured-layer featured-enter"
+                        priority
+                      />
+                    </div>
+                  )}
                   {/* Gradient overlay at bottom */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
 
@@ -904,30 +1126,28 @@ aria-label="Patreon"
                 <div className="absolute bottom-0 left-0 right-0 p-4 pb-5 md:p-6 md:pb-8">
                   {/* Added md:text-2xl to text size on tablet */}
                   <h1
-                    className="text-2xl md:text-3xl font-semibold mb-2.5 leading-[1.1] text-white drop-shadow-lg break-words"
+                    className="text-2xl md:text-3xl font-semibold mb-2.5 leading-[1.1] text-white drop-shadow-lg break-words line-clamp-2"
                     style={
                       featuredTitleStyle
                         ? {
                             fontFamily: featuredTitleStyle.fontFamily,
                             fontSize: `${featuredTitleStyle.fontSizePx}px`,
                             lineHeight: "1.1",
+                            minHeight: "2.2em",
                           }
-                        : undefined
+                        : { minHeight: "2.2em" }
                     }
                   >
-  {featuredTitleText}
-</h1>
+                    {featuredTitleText}
+                  </h1>
                   {/* Added md:text-base to text size on tablet */}
-                  <p className="text-sm md:text-base text-gray-300 mb-4">
-                    {featuredDescription || defaultFeaturedDescription}
-                  </p>
 
                   {/* Buttons */}
                   <div className="flex gap-3">
                     <Button
                       className="flex-1 bg-white text-black hover:bg-gray-200 py-2.5 md:py-3 text-sm md:text-base font-semibold flex items-center justify-center gap-2"
                       onClick={() => {
-                        openVideoModal(featuredVideo.title, featuredVideo.videoUrl)
+                        openVideoModal(activeFeaturedVideo.title, activeFeaturedVideo.videoUrl)
                       }}
                     >
                       <Play className="w-5 h-5 md:w-6 md:h-6 fill-black" />
@@ -962,29 +1182,27 @@ aria-label="Patreon"
                 ) : (
                   <>
                   <h1
-                    className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold mb-3 md:mb-4 leading-[1.1] break-words max-w-[90%] sm:max-w-[85%]"
+                    className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold mb-3 md:mb-4 leading-[1.1] break-words max-w-[90%] sm:max-w-[85%] line-clamp-2"
                     style={
                       featuredTitleStyle
                         ? {
                             fontFamily: featuredTitleStyle.fontFamily,
                             fontSize: `${featuredTitleStyle.fontSizePx}px`,
                             lineHeight: "1.1",
+                            minHeight: "2.2em",
                           }
-                        : undefined
+                        : { minHeight: "2.2em" }
                     }
                   >
   {featuredTitleText}
 </h1>
 
-                    <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-4 md:mb-6 text-gray-300">
-                      {featuredDescription || defaultFeaturedDescription}
-                    </p>
                     <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                       <Button
                         size="lg"
                         className="bg-white text-black hover:bg-gray-200 px-8 sm:px-10 md:px-12 py-5 sm:py-6 text-base sm:text-lg md:text-xl min-w-[160px] sm:min-w-[180px] flex items-center justify-center hover:scale-105 sm:hover:scale-110 transition-transform duration-200 w-full sm:w-auto"
                         onClick={() => {
-                          openVideoModal(featuredVideo.title, featuredVideo.videoUrl)
+                          openVideoModal(activeFeaturedVideo.title, activeFeaturedVideo.videoUrl)
                         }}
                       >
                         <Play className="w-6 h-6 sm:w-7 sm:h-7 mr-2 sm:mr-3 fill-black" />
@@ -1008,7 +1226,7 @@ aria-label="Patreon"
           </>
         )}
 
-        {!featuredVideo && !isLoading && (
+        {!activeFeaturedVideo && !isLoading && (
           <div className="relative z-10 w-full p-4 md:p-16">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4">No Videos Available</h1>
             <p className="text-base sm:text-lg md:text-xl mb-6 text-gray-200">

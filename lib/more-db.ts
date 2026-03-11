@@ -14,6 +14,7 @@ export type MoreRow = {
   view_count: string | null
   comment_count: number | null
   duration: string | null
+  categories: string[] | null
 }
 
 let didInit = false
@@ -37,8 +38,14 @@ export async function ensureMoreTable() {
       published_at TIMESTAMPTZ,
       view_count TEXT,
       comment_count INT,
-      duration TEXT
+      duration TEXT,
+      categories TEXT[]
     );
+  `)
+
+  await pg.query(`
+    ALTER TABLE more_videos
+    ADD COLUMN IF NOT EXISTS categories TEXT[];
   `)
 }
 
@@ -48,7 +55,7 @@ export async function listMoreRows(): Promise<MoreRow[]> {
     SELECT
       video_id, source, added_at,
       video_url, title, channel_name, thumbnail, description,
-      published_at, view_count, comment_count, duration
+      published_at, view_count, comment_count, duration, categories
     FROM more_videos
     ORDER BY added_at DESC
   `)
@@ -90,6 +97,7 @@ export async function addUploadVideo(v: {
   viewCount?: string
   commentCount?: number
   duration?: string
+  categories?: string[]
 }) {
   await ensureMoreTable()
 
@@ -98,12 +106,12 @@ export async function addUploadVideo(v: {
     INSERT INTO more_videos (
       video_id, source, video_url,
       title, channel_name, thumbnail, description,
-      published_at, view_count, comment_count, duration
+      published_at, view_count, comment_count, duration, categories
     )
     VALUES (
       $1, 'upload', $2,
       $3, $4, $5, $6,
-      $7, $8, $9, $10
+      $7, $8, $9, $10, $11
     )
     ON CONFLICT (video_id) DO UPDATE SET
       video_url = EXCLUDED.video_url,
@@ -114,7 +122,8 @@ export async function addUploadVideo(v: {
       published_at = EXCLUDED.published_at,
       view_count = EXCLUDED.view_count,
       comment_count = EXCLUDED.comment_count,
-      duration = EXCLUDED.duration
+      duration = EXCLUDED.duration,
+      categories = EXCLUDED.categories
   `,
     [
       v.id,
@@ -127,7 +136,21 @@ export async function addUploadVideo(v: {
       v.viewCount ?? "0",
       v.commentCount ?? 0,
       v.duration ?? "",
+      v.categories ?? [],
     ],
+  )
+}
+
+export async function updateMoreCategories(id: string, categories: string[]) {
+  await ensureMoreTable()
+  await pg.query(
+    `
+    INSERT INTO more_videos (video_id, source, categories)
+    VALUES ($1, 'youtube', $2)
+    ON CONFLICT (video_id) DO UPDATE SET
+      categories = EXCLUDED.categories
+  `,
+    [id, categories],
   )
 }
 

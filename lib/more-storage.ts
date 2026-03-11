@@ -11,6 +11,7 @@ export interface MoreVideo {
   commentCount: number // Added commentCount field
   duration: string
   addedAt: string // ISO date string when added to More
+  categories?: string[]
 }
 
 interface MoreData {

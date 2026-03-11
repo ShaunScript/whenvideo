@@ -22,6 +22,14 @@ interface Video {
   duration: number
   addedAt: string
   commentCount: number
+  categories?: string[]
+}
+
+type FeaturedCarouselItem = {
+  videoId: string
+  title: string
+  description: string
+  thumbnailUrl: string
 }
 
 // ✅ Replacement for awards-data extractVideoId (YouTube-only)
@@ -73,6 +81,8 @@ export default function AdminPanel() {
   const [moreVideos, setMoreVideos] = useState<Video[]>([])
   const [videoUrl, setVideoUrl] = useState("")
   const [isAdding, setIsAdding] = useState(false)
+  const [categoryEdits, setCategoryEdits] = useState<Record<string, string>>({})
+  const [categorySaving, setCategorySaving] = useState<Record<string, boolean>>({})
 
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -87,6 +97,19 @@ export default function AdminPanel() {
   const [featuredVideoUrl, setFeaturedVideoUrl] = useState("")
   const [savedFeaturedVideoId, setSavedFeaturedVideoId] = useState<string | null>(null)
   const [isSavingFeaturedVideo, setIsSavingFeaturedVideo] = useState(false)
+  const [featuredVideoListInput, setFeaturedVideoListInput] = useState("")
+  const [savedFeaturedVideoList, setSavedFeaturedVideoList] = useState<string[]>([])
+  const [isSavingFeaturedVideoList, setIsSavingFeaturedVideoList] = useState(false)
+  const [featuredCarouselItems, setFeaturedCarouselItems] = useState<FeaturedCarouselItem[]>([
+    { videoId: "", title: "", description: "", thumbnailUrl: "" },
+    { videoId: "", title: "", description: "", thumbnailUrl: "" },
+    { videoId: "", title: "", description: "", thumbnailUrl: "" },
+    { videoId: "", title: "", description: "", thumbnailUrl: "" },
+    { videoId: "", title: "", description: "", thumbnailUrl: "" },
+  ])
+  const [featuredCarouselIndex, setFeaturedCarouselIndex] = useState(0)
+  const [isSavingFeaturedCarousel, setIsSavingFeaturedCarousel] = useState(false)
+  const [isFontEditorOpen, setIsFontEditorOpen] = useState(false)
   const [featuredTitleFont, setFeaturedTitleFont] = useState("")
   const [featuredTitleSize, setFeaturedTitleSize] = useState("")
   const [featuredTitleFontUrl, setFeaturedTitleFontUrl] = useState<string | null>(null)
@@ -111,12 +134,6 @@ export default function AdminPanel() {
     { key: "more", label: "More Videos", panelId: "tab-panel-more" },
     { key: "current", label: "Current More Videos", panelId: "tab-panel-current" },
     { key: "game", label: "Game Leaderboard", panelId: "tab-panel-game" },
-  ]
-  const [featuredSubTab, setFeaturedSubTab] = useState<"video" | "style" | "title">("video")
-  const featuredTabs: { key: "video" | "style" | "title"; label: string; panelId: string }[] = [
-    { key: "video", label: "Video Override", panelId: "featured-panel-video" },
-    { key: "style", label: "Featured Title Style", panelId: "featured-panel-style" },
-    { key: "title", label: "Title Override", panelId: "featured-panel-title" },
   ]
   const [gameLeaderboard, setGameLeaderboard] = useState<{ name: string; score: number; ts: number }[]>([])
   const [isLoadingGameLeaderboard, setIsLoadingGameLeaderboard] = useState(false)
@@ -153,6 +170,35 @@ export default function AdminPanel() {
   const showMessage = (type: "success" | "error", text: string) => {
     setMessage({ type, text })
     setTimeout(() => setMessage(null), 3000)
+  }
+
+  const normalizeCategories = (value: string) =>
+    value
+      .split(",")
+      .map((cat) => cat.trim())
+      .filter(Boolean)
+
+  const getCategoryText = (video: Video) => categoryEdits[video.id] ?? (video.categories ?? []).join(", ")
+
+  const handleSaveCategories = async (video: Video) => {
+    const categories = normalizeCategories(getCategoryText(video))
+    setCategorySaving((prev) => ({ ...prev, [video.id]: true }))
+    try {
+      const res = await fetch("/api/admin/more", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoId: video.id, categories }),
+      })
+      if (!res.ok) throw new Error("Failed to update categories")
+      setMoreVideos((prev) => prev.map((v) => (v.id === video.id ? { ...v, categories } : v)))
+      setCategoryEdits((prev) => ({ ...prev, [video.id]: categories.join(", ") }))
+      showMessage("success", "Categories updated")
+    } catch (error) {
+      console.error("Failed to update categories:", error)
+      showMessage("error", "Failed to update categories")
+    } finally {
+      setCategorySaving((prev) => ({ ...prev, [video.id]: false }))
+    }
   }
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
@@ -377,6 +423,66 @@ export default function AdminPanel() {
     }
   }
 
+  const loadFeaturedVideoListOverride = async () => {
+    try {
+      const res = await fetch("/api/admin/more/featured-videos", { cache: "no-store" })
+      if (!res.ok) throw new Error("Failed to fetch featured video list")
+      const json = await res.json()
+      const data = json?.data ?? null
+      const list = Array.isArray(data?.videoIds) ? data.videoIds : []
+      setSavedFeaturedVideoList(list)
+      setFeaturedVideoListInput(list.join("\n"))
+    } catch (error) {
+      console.error("Failed to load featured video list:", error)
+      setSavedFeaturedVideoList([])
+      setFeaturedVideoListInput("")
+    }
+  }
+
+  const loadFeaturedCarousel = async () => {
+    try {
+      const res = await fetch("/api/admin/more/featured-carousel", { cache: "no-store" })
+      if (!res.ok) throw new Error("Failed to fetch featured carousel")
+      const json = await res.json()
+      const items = Array.isArray(json?.data?.items) ? json.data.items : []
+      let normalized: FeaturedCarouselItem[] = items.slice(0, 5).map((item: any) => ({
+        videoId: typeof item?.videoId === "string" ? item.videoId : "",
+        title: typeof item?.title === "string" ? item.title : "",
+        description: typeof item?.description === "string" ? item.description : "",
+        thumbnailUrl: typeof item?.thumbnailUrl === "string" ? item.thumbnailUrl : "",
+      }))
+
+      if (normalized.length === 0) {
+        const autoRes = await fetch("/api/admin/more/featured-auto", { cache: "no-store" })
+        if (autoRes.ok) {
+          const autoJson = await autoRes.json()
+          const autoItems = Array.isArray(autoJson?.data?.items) ? autoJson.data.items : []
+          normalized = autoItems.slice(0, 5).map((item: any) => ({
+            videoId: typeof item?.videoId === "string" ? item.videoId : "",
+            title: typeof item?.title === "string" ? item.title : "",
+            description: typeof item?.description === "string" ? item.description : "",
+            thumbnailUrl: typeof item?.thumbnailUrl === "string" ? item.thumbnailUrl : "",
+          }))
+        }
+      }
+      while (normalized.length < 5) {
+        normalized.push({ videoId: "", title: "", description: "", thumbnailUrl: "" })
+      }
+      setFeaturedCarouselItems(normalized)
+      setFeaturedCarouselIndex(0)
+    } catch (error) {
+      console.error("Failed to load featured carousel:", error)
+      setFeaturedCarouselItems([
+        { videoId: "", title: "", description: "", thumbnailUrl: "" },
+        { videoId: "", title: "", description: "", thumbnailUrl: "" },
+        { videoId: "", title: "", description: "", thumbnailUrl: "" },
+        { videoId: "", title: "", description: "", thumbnailUrl: "" },
+        { videoId: "", title: "", description: "", thumbnailUrl: "" },
+      ])
+      setFeaturedCarouselIndex(0)
+    }
+  }
+
   const handleSaveFeaturedVideo = async () => {
     const videoId = extractYouTubeVideoId(featuredVideoUrl)
     if (!videoId) {
@@ -416,6 +522,91 @@ export default function AdminPanel() {
       showMessage("error", "Failed to clear featured video override")
     } finally {
       setIsSavingFeaturedVideo(false)
+    }
+  }
+
+  const handleSaveFeaturedVideoList = async () => {
+    const lines = featuredVideoListInput.split("\n").map((line) => line.trim()).filter(Boolean)
+    const ids: string[] = []
+    for (const line of lines) {
+      const id = extractYouTubeVideoId(line)
+      if (id && !ids.includes(id)) ids.push(id)
+      if (ids.length >= 5) break
+    }
+    if (ids.length === 0) {
+      showMessage("error", "Enter at least one valid YouTube link or ID")
+      return
+    }
+    setIsSavingFeaturedVideoList(true)
+    try {
+      const res = await fetch("/api/admin/more/featured-videos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoIds: ids }),
+      })
+      if (!res.ok) throw new Error("Save failed")
+      await loadFeaturedVideoListOverride()
+      showMessage("success", "Featured video list updated")
+    } catch (error) {
+      console.error("Failed to save featured video list:", error)
+      showMessage("error", "Failed to save featured video list")
+    } finally {
+      setIsSavingFeaturedVideoList(false)
+    }
+  }
+
+  const handleClearFeaturedVideoList = async () => {
+    if (!confirm("Remove the featured video list override?")) return
+    setIsSavingFeaturedVideoList(true)
+    try {
+      const res = await fetch("/api/admin/more/featured-videos", { method: "DELETE" })
+      if (!res.ok) throw new Error("Delete failed")
+      setSavedFeaturedVideoList([])
+      setFeaturedVideoListInput("")
+      showMessage("success", "Featured video list cleared")
+    } catch (error) {
+      console.error("Failed to clear featured video list:", error)
+      showMessage("error", "Failed to clear featured video list")
+    } finally {
+      setIsSavingFeaturedVideoList(false)
+    }
+  }
+
+  const updateFeaturedCarouselItem = (index: number, patch: Partial<FeaturedCarouselItem>) => {
+    setFeaturedCarouselItems((prev) => {
+      const next = [...prev]
+      const current = next[index] ?? { videoId: "", title: "", description: "", thumbnailUrl: "" }
+      next[index] = { ...current, ...patch }
+      return next
+    })
+  }
+
+  const handleSaveFeaturedCarousel = async () => {
+    const cleaned = featuredCarouselItems
+      .slice(0, 5)
+      .map((item) => ({
+        videoId: extractYouTubeVideoId(item.videoId) || item.videoId.trim(),
+        title: item.title.trim(),
+        description: item.description.trim(),
+        thumbnailUrl: item.thumbnailUrl.trim(),
+      }))
+      .filter((item) => item.videoId)
+
+    setIsSavingFeaturedCarousel(true)
+    try {
+      const res = await fetch("/api/admin/more/featured-carousel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: cleaned }),
+      })
+      if (!res.ok) throw new Error("Save failed")
+      await loadFeaturedCarousel()
+      showMessage("success", "Featured carousel updated")
+    } catch (error) {
+      console.error("Failed to save featured carousel:", error)
+      showMessage("error", "Failed to save featured carousel")
+    } finally {
+      setIsSavingFeaturedCarousel(false)
     }
   }
 
@@ -687,6 +878,8 @@ export default function AdminPanel() {
       loadFeaturedOverride()
       loadFeaturedDescription()
       loadFeaturedVideoOverride()
+      loadFeaturedVideoListOverride()
+      loadFeaturedCarousel()
       loadFeaturedTitleStyle()
       loadFeaturedTitleOverride()
       loadUploadedFonts()
@@ -973,397 +1166,215 @@ export default function AdminPanel() {
           ))}
         </div>
 
-        {activeTab === "featured" && (
+                {activeTab === "featured" && (
         <section id="tab-panel-featured" role="tabpanel" aria-labelledby="tab-featured" className="mb-12">
           <h2 className="text-xl font-semibold mb-4">Featured Video Editor</h2>
-          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800 space-y-6">
-            <div
-              role="tablist"
-              aria-label="Featured editor sections"
-              className="flex flex-wrap gap-2 border-b border-zinc-800 pb-3"
-              onKeyDown={(event) => {
-                if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return
-                event.preventDefault()
-                const currentIndex = featuredTabs.findIndex((tab) => tab.key === featuredSubTab)
-                const direction = event.key === "ArrowRight" ? 1 : -1
-                const nextIndex = (currentIndex + direction + featuredTabs.length) % featuredTabs.length
-                const nextTab = featuredTabs[nextIndex]
-                if (nextTab) {
-                  setFeaturedSubTab(nextTab.key)
-                  const nextButton = document.getElementById(`featured-tab-${nextTab.key}`) as HTMLButtonElement | null
-                  nextButton?.focus()
-                }
-              }}
-            >
-              {featuredTabs.map((tab) => (
-                <button
-                  key={tab.key}
-                  id={`featured-tab-${tab.key}`}
-                  role="tab"
-                  type="button"
-                  aria-selected={featuredSubTab === tab.key}
-                  aria-controls={tab.panelId}
-                  tabIndex={featuredSubTab === tab.key ? 0 : -1}
-                  onClick={() => setFeaturedSubTab(tab.key)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    featuredSubTab === tab.key ? "bg-red-600 text-white" : "bg-black text-gray-300 hover:text-white"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {featuredSubTab === "video" && (
-            <div id="featured-panel-video" role="tabpanel" aria-labelledby="featured-tab-video" className="space-y-6">
-              <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-white">Featured Video Override</h3>
-              <div className="space-y-2">
-                <Label className="text-white">YouTube link or video ID</Label>
-                <Input
-                  value={featuredVideoUrl}
-                  onChange={(e) => setFeaturedVideoUrl(e.target.value)}
-                  className="bg-black border-zinc-700 text-white"
-                  placeholder="https://www.youtube.com/watch?v=..."
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleSaveFeaturedVideo}
-                  disabled={isSavingFeaturedVideo}
-                  className="bg-red-600 hover:bg-red-700 flex-1"
-                >
-                  {isSavingFeaturedVideo ? "Saving..." : "Save Featured Video"}
-                </Button>
-                {savedFeaturedVideoId && (
-                  <Button
-                    onClick={handleClearFeaturedVideo}
-                    variant="secondary"
-                    disabled={isSavingFeaturedVideo}
-                    className="flex-1"
-                  >
-                    Remove Override
-                  </Button>
-                )}
-              </div>
-
-              {savedFeaturedVideoId ? (
-                <p className="text-sm text-gray-300">Override active: {savedFeaturedVideoId}</p>
-              ) : (
-                <p className="text-sm text-gray-400">No override set. Homepage will use the most recent upload.</p>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-white">Featured Thumbnail Override</h3>
-              <div className="space-y-2">
-                <Label className="text-white">Thumbnail URL (auto-filled after upload or paste manually)</Label>
-                <Input
-                  value={featuredThumbUrl}
-                  onChange={(e) => setFeaturedThumbUrl(e.target.value)}
-                  className="bg-black border-zinc-700 text-white"
-                  placeholder="https://..."
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
-                <div className="space-y-2">
-                  <Label className="text-white">Upload Image (jpg, png, webp)</Label>
-                  <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-black px-3 py-2">
-                    <input
-                      id="featured-thumb-file"
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.webp"
-                      className="hidden"
-                      onChange={(e) => setFeaturedThumbFile(e.target.files?.[0] ?? null)}
+          <div className="bg-black rounded-lg p-6 border border-zinc-800 space-y-6">
+            <div className="grid lg:grid-cols-[1.2fr,1fr] gap-6">
+              <div className="space-y-4">
+                <div className="relative aspect-video bg-black border border-zinc-800 rounded-lg overflow-hidden">
+                  {featuredCarouselItems[featuredCarouselIndex]?.thumbnailUrl ? (
+                    <img
+                      src={featuredCarouselItems[featuredCarouselIndex]?.thumbnailUrl}
+                      alt="Featured thumbnail"
+                      className="absolute inset-0 h-full w-full object-cover"
                     />
-                    <label
-                      htmlFor="featured-thumb-file"
-                      className="cursor-pointer rounded-md bg-zinc-700 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-600"
+                  ) : (
+                    <div className="absolute inset-0 bg-zinc-900" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="px-6">
+                    <button
+                      type="button"
+                      onClick={() => setIsFontEditorOpen((prev) => !prev)}
+                      className="text-left text-white uppercase tracking-wide font-bold leading-[1.1] max-w-[70%] line-clamp-2"
+                      style={{
+                        fontFamily: previewFontFamily || "inherit",
+                        fontSize: `${Number.parseInt(featuredTitleSize || "", 10) ||
+                          savedFeaturedTitleStyle?.fontSizePx ||
+                          48}px`,
+                        minHeight: "2.2em",
+                      }}
                     >
-                      Choose File
-                    </label>
-                    <span className="text-sm text-gray-400 truncate">
-                      {featuredThumbFile?.name ?? "No file chosen"}
-                    </span>
+                      {featuredCarouselItems[featuredCarouselIndex]?.title || "TITLE"}
+                    </button>
+                    </div>
                   </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      setFeaturedCarouselIndex((prev) => (prev + featuredCarouselItems.length - 1) % 5)
+                    }
+                  >
+                    Prev
+                  </Button>
+                  <div className="text-sm text-gray-400">
+                    {featuredCarouselIndex + 1} / 5
+                  </div>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setFeaturedCarouselIndex((prev) => (prev + 1) % 5)}
+                  >
+                    Next
+                  </Button>
+                </div>
+
+                <div className="flex gap-2">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <button
+                      key={`featured-slot-${index}`}
+                      type="button"
+                      onClick={() => setFeaturedCarouselIndex(index)}
+                      className={`flex-1 rounded-md border px-3 py-2 text-xs font-semibold ${
+                        featuredCarouselIndex === index
+                          ? "border-red-600 text-red-400"
+                          : "border-zinc-700 text-gray-400"
+                      }`}
+                    >
+                      Slot {index + 1}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-white">YouTube link or video ID</Label>
+                  <Input
+                    value={featuredCarouselItems[featuredCarouselIndex]?.videoId || ""}
+                    onChange={(e) => updateFeaturedCarouselItem(featuredCarouselIndex, { videoId: e.target.value })}
+                    className="bg-black border-zinc-700 text-white"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-white">Title</Label>
+                  <Input
+                    value={featuredCarouselItems[featuredCarouselIndex]?.title || ""}
+                    onChange={(e) => updateFeaturedCarouselItem(featuredCarouselIndex, { title: e.target.value })}
+                    className="bg-black border-zinc-700 text-white"
+                    placeholder="TITLE"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-white">Description</Label>
+                  <textarea
+                    value={featuredCarouselItems[featuredCarouselIndex]?.description || ""}
+                    onChange={(e) => updateFeaturedCarouselItem(featuredCarouselIndex, { description: e.target.value })}
+                    className="w-full min-h-[120px] rounded-md bg-black border border-zinc-700 text-white p-3 text-sm"
+                    placeholder="Description..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-white">Thumbnail URL</Label>
+                  <Input
+                    value={featuredCarouselItems[featuredCarouselIndex]?.thumbnailUrl || ""}
+                    onChange={(e) => updateFeaturedCarouselItem(featuredCarouselIndex, { thumbnailUrl: e.target.value })}
+                    className="bg-black border-zinc-700 text-white"
+                    placeholder="https://..."
+                  />
                 </div>
                 <div className="flex gap-3">
                   <Button
-                    onClick={handleUploadFeaturedThumb}
-                    disabled={isUploadingFeatured}
-                    className="bg-zinc-700 hover:bg-zinc-600 flex-1"
-                  >
-                    {isUploadingFeatured ? "Uploading..." : "Upload & Apply"}
-                  </Button>
-                  <Button
-                    onClick={handleSaveFeaturedOverride}
-                    disabled={isSavingFeatured}
+                    onClick={handleSaveFeaturedCarousel}
+                    disabled={isSavingFeaturedCarousel}
                     className="bg-red-600 hover:bg-red-700 flex-1"
                   >
-                    {isSavingFeatured ? "Saving..." : "Apply URL"}
+                    {isSavingFeaturedCarousel ? "Saving..." : "Save Carousel"}
                   </Button>
-                  {featuredOverride && (
-                    <Button
-                      onClick={handleClearFeaturedOverride}
-                      variant="secondary"
-                      disabled={isSavingFeatured}
-                      className="flex-1"
+                </div>
+              </div>
+            </div>
+
+            {isFontEditorOpen && (
+              <div className="mt-6 rounded-lg border border-red-600/40 bg-black p-4 space-y-4">
+                <div className="text-sm font-semibold text-red-500 uppercase tracking-[0.2em]">Title Font</div>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-white">Upload font file (ttf, otf, woff, woff2)</Label>
+                    <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-black px-3 py-2">
+                      <input
+                        id="featured-title-font-file-inline"
+                        type="file"
+                        accept=".ttf,.otf,.woff,.woff2"
+                        className="hidden"
+                        onChange={(e) => setFontUploadFile(e.target.files?.[0] ?? null)}
+                      />
+                      <label
+                        htmlFor="featured-title-font-file-inline"
+                        className="cursor-pointer rounded-md bg-zinc-700 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-600"
+                      >
+                        Choose File
+                      </label>
+                      <span className="text-sm text-gray-400 truncate">
+                        {fontUploadFile?.name ?? "No file chosen"}
+                      </span>
+                    </div>
+                    <Button onClick={handleUploadFont} disabled={isUploadingFont} className="bg-red-600 hover:bg-red-700">
+                      {isUploadingFont ? "Uploading..." : "Upload Font"}
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white">Select uploaded font</Label>
+                    <select
+                      value={selectedFontName}
+                      onChange={(e) => handleSelectFont(e.target.value)}
+                      className="w-full bg-black border border-zinc-700 text-white rounded-md px-3 py-2 text-sm"
                     >
-                      Remove Override
+                      <option value="">-- Select a font --</option>
+                      {uploadedFonts.map((font) => (
+                        <option key={font.fileName} value={font.name}>
+                          {font.name}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedFontName && (
+                      <p className="text-xs text-gray-400">Using uploaded font: {selectedFontName}</p>
+                    )}
+
+                    <div className="space-y-2 pt-3">
+                      <Label className="text-white">Title Size</Label>
+                      <input
+                        type="range"
+                        min={24}
+                        max={200}
+                        value={Number.parseInt(featuredTitleSize || "", 10) || savedFeaturedTitleStyle?.fontSizePx || 48}
+                        onChange={(e) => setFeaturedTitleSize(e.target.value)}
+                        className="w-full"
+                      />
+                      <div className="text-xs text-gray-400">
+                        {Number.parseInt(featuredTitleSize || "", 10) || savedFeaturedTitleStyle?.fontSizePx || 48}px
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleSaveFeaturedTitleStyle}
+                    disabled={isSavingFeaturedTitleStyle}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    {isSavingFeaturedTitleStyle ? "Saving..." : "Save Title Style"}
+                  </Button>
+                  {savedFeaturedTitleStyle && (
+                    <Button onClick={handleClearFeaturedTitleStyle} variant="secondary" disabled={isSavingFeaturedTitleStyle}>
+                      Clear
                     </Button>
                   )}
                 </div>
               </div>
-
-              {featuredOverride ? (
-                <div className="text-sm text-gray-300 space-y-2">
-                  <p>Current override (preview below):</p>
-                  <div className="relative w-48 h-28 border border-zinc-800 rounded overflow-hidden">
-                    <Image src={featuredOverride.thumbnailUrl || "/placeholder.svg"} alt="Featured thumb" fill className="object-cover" />
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-400">No override set. Upload an image to replace the homepage hero.</p>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-white">Featured Description Override</h3>
-              <div className="space-y-2">
-                <Label className="text-white">Description text</Label>
-                <textarea
-                  value={featuredDescription}
-                  onChange={(e) => setFeaturedDescription(e.target.value)}
-                  rows={4}
-                  className="w-full bg-black border border-zinc-700 text-white rounded-md p-3 resize-none focus:outline-none focus:ring-2 focus:ring-red-600"
-                  placeholder="Featured description shown on the homepage hero..."
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleSaveFeaturedDescription}
-                  disabled={isSavingFeaturedDescription}
-                  className="bg-red-600 hover:bg-red-700 flex-1"
-                >
-                  {isSavingFeaturedDescription ? "Saving..." : "Save Description"}
-                </Button>
-                {savedFeaturedDescription && (
-                  <Button
-                    onClick={handleClearFeaturedDescription}
-                    variant="secondary"
-                    disabled={isSavingFeaturedDescription}
-                    className="flex-1"
-                  >
-                    Remove Override
-                  </Button>
-                )}
-              </div>
-
-              {savedFeaturedDescription ? (
-                <p className="text-sm text-gray-300">Current override is live on the homepage hero.</p>
-              ) : (
-                <p className="text-sm text-gray-400">No override set. Default hero description will be used.</p>
-              )}
-            </div>
-            </div>
-            )}
-
-            {featuredSubTab === "style" && (
-            <div id="featured-panel-style" role="tabpanel" aria-labelledby="featured-tab-style" className="space-y-6">
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-white">Featured Title Style</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label className="text-white">Font family</Label>
-                  <Input
-                    value={featuredTitleFont}
-                    onChange={(e) => {
-                      setFeaturedTitleFont(e.target.value)
-                      setFeaturedTitleFontUrl(null)
-                      setSelectedFontName("")
-                      setSelectedFontUrl(null)
-                    }}
-                    className="bg-black border-zinc-700 text-white"
-                    placeholder='e.g. "Bebas Neue", "Oswald", "Impact"'
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-white">Font size (px)</Label>
-                  <Input
-                    value={featuredTitleSize}
-                    onChange={(e) => setFeaturedTitleSize(e.target.value)}
-                    className="bg-black border-zinc-700 text-white"
-                    placeholder="e.g. 64"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
-                <div className="space-y-2">
-                  <Label className="text-white">Upload font file (ttf, otf, oft, woff, woff2)</Label>
-                  <div className="flex items-center gap-3 rounded-md border border-zinc-700 bg-black px-3 py-2">
-                    <input
-                      id="featured-title-font-file"
-                      type="file"
-                      accept=".ttf,.otf,.oft,.woff,.woff2"
-                      className="hidden"
-                      onChange={(e) => setFontUploadFile(e.target.files?.[0] ?? null)}
-                    />
-                    <label
-                      htmlFor="featured-title-font-file"
-                      className="cursor-pointer rounded-md bg-zinc-700 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-600"
-                    >
-                      Choose File
-                    </label>
-                    <span className="text-sm text-gray-400 truncate">
-                      {fontUploadFile?.name ?? "No file chosen"}
-                    </span>
-                  </div>
-                </div>
-                <Button
-                  onClick={handleUploadFont}
-                  disabled={isUploadingFont}
-                  className="bg-zinc-700 hover:bg-zinc-600"
-                >
-                  {isUploadingFont ? "Uploading..." : "Upload Font"}
-                </Button>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-white">Select uploaded font</Label>
-                <select
-                  value={selectedFontName}
-                  onChange={(e) => handleSelectFont(e.target.value)}
-                  className="w-full h-10 rounded-md border border-zinc-700 bg-black px-3 text-sm text-white"
-                >
-                  <option value="">-- Select a font --</option>
-                  {uploadedFonts.map((font) => (
-                    <option key={font.fileName} value={font.name}>
-                      {font.name}
-                    </option>
-                  ))}
-                </select>
-                {selectedFontUrl && (
-                  <p className="text-xs text-gray-400">Using uploaded font: {selectedFontName}</p>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleSaveFeaturedTitleStyle}
-                  disabled={isSavingFeaturedTitleStyle}
-                  className="bg-red-600 hover:bg-red-700 flex-1"
-                >
-                  {isSavingFeaturedTitleStyle ? "Saving..." : "Save Title Style"}
-                </Button>
-                {savedFeaturedTitleStyle && (
-                  <Button
-                    onClick={handleClearFeaturedTitleStyle}
-                    variant="secondary"
-                    disabled={isSavingFeaturedTitleStyle}
-                    className="flex-1"
-                  >
-                    Remove Override
-                  </Button>
-                )}
-              </div>
-
-              {savedFeaturedTitleStyle ? (
-                <p className="text-sm text-gray-300">
-                  Override active: {savedFeaturedTitleStyle.fontFamily} @ {savedFeaturedTitleStyle.fontSizePx}px
-                </p>
-              ) : (
-                <p className="text-sm text-gray-400">No title style override set.</p>
-              )}
-            </div>
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-white">Preview</h3>
-              <div className="relative overflow-hidden rounded-lg border border-zinc-800">
-                <div className="relative h-48 w-full">
-                  <Image
-                    src={featuredOverride?.thumbnailUrl || "/placeholder.svg"}
-                    alt="Featured preview"
-                    fill
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
-                </div>
-                <div className="absolute inset-0 flex flex-col justify-end p-4">
-                  <p
-                    className="text-white font-semibold leading-[1.1] break-words"
-                    style={{
-                      fontFamily: previewFontFamily || "inherit",
-                      fontSize: `${Math.min(
-                        Math.max(
-                          Number.parseInt(featuredTitleSize || "", 10) ||
-                            savedFeaturedTitleStyle?.fontSizePx ||
-                            32,
-                          18,
-                        ),
-                        64,
-                      )}px`,
-                      lineHeight: "1.1",
-                    }}
-                  >
-                    {featuredTitleOverride || savedFeaturedTitleOverride || "Featured Title Preview"}
-                  </p>
-                  <p className="text-xs text-gray-300 mt-2">
-                    {featuredDescription || savedFeaturedDescription || "Featured description preview"}
-                  </p>
-                </div>
-              </div>
-            </div>
-            </div>
-            )}
-
-            {featuredSubTab === "title" && (
-            <div id="featured-panel-title" role="tabpanel" aria-labelledby="featured-tab-title" className="space-y-3">
-              <h3 className="text-sm font-semibold text-white">Featured Title Override</h3>
-              <div className="space-y-2">
-                <Label className="text-white">Title text</Label>
-                <Input
-                  value={featuredTitleOverride}
-                  onChange={(e) => setFeaturedTitleOverride(e.target.value)}
-                  className="bg-black border-zinc-700 text-white"
-                  placeholder="Featured video title override..."
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleSaveFeaturedTitleOverride}
-                  disabled={isSavingFeaturedTitleOverride}
-                  className="bg-red-600 hover:bg-red-700 flex-1"
-                >
-                  {isSavingFeaturedTitleOverride ? "Saving..." : "Save Title"}
-                </Button>
-                {savedFeaturedTitleOverride && (
-                  <Button
-                    onClick={handleClearFeaturedTitleOverride}
-                    variant="secondary"
-                    disabled={isSavingFeaturedTitleOverride}
-                    className="flex-1"
-                  >
-                    Remove Override
-                  </Button>
-                )}
-              </div>
-
-              {savedFeaturedTitleOverride ? (
-                <p className="text-sm text-gray-300">Current override is live on the homepage hero.</p>
-              ) : (
-                <p className="text-sm text-gray-400">No override set. Default title will be used.</p>
-              )}
-            </div>
             )}
           </div>
         </section>
         )}
-
-        {activeTab === "more" && (
+{activeTab === "more" && (
         <section id="tab-panel-more" role="tabpanel" aria-labelledby="tab-more" className="mb-12">
           <h2 className="text-xl font-semibold mb-4">Add Video to More</h2>
           <div className="flex flex-col gap-2 mb-4">
@@ -1395,7 +1406,7 @@ export default function AdminPanel() {
           ) : (
             <div className="bg-zinc-900 rounded-lg border border-zinc-800 divide-y divide-zinc-800 max-h-[600px] overflow-y-auto">
               {moreVideos.map((video) => (
-                <div key={video.id} className="flex items-center gap-4 p-4 hover:bg-zinc-800/50 transition-colors">
+                <div key={video.id} className="flex items-start gap-4 p-4 hover:bg-zinc-800/50 transition-colors">
                   <div className="relative w-32 h-20 flex-shrink-0 rounded overflow-hidden">
                     <Image
                       src={video.thumbnail || "/placeholder.svg"}
@@ -1407,6 +1418,23 @@ export default function AdminPanel() {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium line-clamp-2 text-sm">{video.title}</h3>
                     <p className="text-xs text-gray-400 mt-1">{video.id}</p>
+                    <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                      <Input
+                        value={getCategoryText(video)}
+                        onChange={(e) => setCategoryEdits((prev) => ({ ...prev, [video.id]: e.target.value }))}
+                        placeholder="Categories (comma separated)"
+                        className="bg-black border-zinc-700 text-white text-xs h-8"
+                      />
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-8 text-xs"
+                        onClick={() => handleSaveCategories(video)}
+                        disabled={!!categorySaving[video.id]}
+                      >
+                        {categorySaving[video.id] ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
                   </div>
                   <Button
                     onClick={() => handleRemoveVideo(video.id)}
@@ -1512,3 +1540,4 @@ export default function AdminPanel() {
     </div>
   )
 }
+

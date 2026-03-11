@@ -123,10 +123,12 @@ export function SiteHeader({ showTimer = false, timerData, isCompactMode = false
               href="/twitch-stats"
               className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap"
             >
-              Leaderboard
+              Twitch Case
             </Link>
 
-            {/* Socials text button removed */}
+            <Link href="/socials" className="hover:text-gray-300 transition-colors flex items-center whitespace-nowrap">
+              Socials
+            </Link>
           </nav>
         </div>
 
