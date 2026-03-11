@@ -12,11 +12,14 @@ import { readFeaturedVideo } from "@/lib/featured-video-cache"
 
 const CACHE_TTL_MS = 10 * 60 * 1000
 
-function cacheKey(maxResults: number, moreVideoIds: string[]) {
-  return `yt:${maxResults}:${moreVideoIds.join(",")}`
+const YOUTUBE_CACHE_VERSION = 4
+
+function cacheKey(maxResults: number, moreVideoIds: string[], featuredMode: string, featuredOverrideId: string | null) {
+  const overridePart = featuredOverrideId ?? "none"
+  return `yt:v${YOUTUBE_CACHE_VERSION}:${featuredMode}:${overridePart}:${maxResults}:${moreVideoIds.join(",")}`
 }
 
-async function loadFreshData(maxResults: number, moreVideoIds: string[]) {
+async function loadFreshData(maxResults: number, moreVideoIds: string[], featuredOverrideId: string | null) {
   const apiKey = process.env.YOUTUBE_API_KEY
 
   if (!apiKey) {
@@ -36,8 +39,7 @@ async function loadFreshData(maxResults: number, moreVideoIds: string[]) {
 
   const moreVids = moreVideoIds.length > 0 ? await fetchVideosByIds(apiKey, moreVideoIds) : []
 
-  const featuredOverride = await readFeaturedVideo()
-  let featuredVideo = featuredOverride?.videoId ? await fetchVideoById(apiKey, featuredOverride.videoId) : null
+  let featuredVideo = featuredOverrideId ? await fetchVideoById(apiKey, featuredOverrideId) : null
 
   if (!featuredVideo) {
     const getMostRecentVideo = (videos: typeof primary.videos) => {
@@ -50,21 +52,13 @@ async function loadFreshData(maxResults: number, moreVideoIds: string[]) {
       }, null as (typeof primary.videos)[number] | null)
     }
 
-    const primaryFeatured = getMostRecentVideo(primary.videos)
-    const needMoreFeatured = getMostRecentVideo(needMoreData.videos)
+    // Prefer long-form uploads for the featured slot; fall back to any upload if no longs are available.
+    const primaryFeatured = getMostRecentVideo(filterLongVideos(primary.videos)) ?? getMostRecentVideo(primary.videos)
+    const needMoreFeatured =
+      getMostRecentVideo(filterLongVideos(needMoreData.videos)) ?? getMostRecentVideo(needMoreData.videos)
 
-    featuredVideo =
-      !primaryFeatured && !needMoreFeatured
-        ? null
-        : !primaryFeatured
-          ? needMoreFeatured
-          : !needMoreFeatured
-            ? primaryFeatured
-            : (() => {
-                const primaryTime = new Date(primaryFeatured.publishedAt).getTime() || 0
-                const needMoreTime = new Date(needMoreFeatured.publishedAt).getTime() || 0
-                return primaryTime >= needMoreTime ? primaryFeatured : needMoreFeatured
-              })()
+    // Prefer the secondary channel's latest upload when available; otherwise use primary.
+    featuredVideo = needMoreFeatured ?? primaryFeatured
   }
 
   return {
@@ -79,12 +73,21 @@ async function loadFreshData(maxResults: number, moreVideoIds: string[]) {
 }
 
 export async function getYouTubeChannelData(maxResults = 50, moreVideoIds: string[] = []) {
-  const key = cacheKey(maxResults, moreVideoIds)
+  const rawMode = (process.env.FEATURED_VIDEO_MODE ?? "").toLowerCase().trim()
+  const featuredOverride = await readFeaturedVideo()
+  const overrideId = (featuredOverride?.videoId ?? "").trim() || null
+
+  const forceAuto = rawMode === "auto"
+  const forceManual = rawMode === "manual"
+
+  const featuredMode = forceAuto ? "auto" : forceManual ? "manual" : "auto+override"
+  const effectiveOverrideId = forceAuto ? null : overrideId
+  const key = cacheKey(maxResults, moreVideoIds, featuredMode, forceAuto ? null : overrideId)
   const cached = await getYouTubeCache<Awaited<ReturnType<typeof loadFreshData>>>(key, CACHE_TTL_MS, true)
   if (cached?.isFresh) return cached.data
 
   try {
-    const data = await loadFreshData(maxResults, moreVideoIds)
+    const data = await loadFreshData(maxResults, moreVideoIds, effectiveOverrideId)
     await setYouTubeCache(key, data)
     return data
   } catch (error) {

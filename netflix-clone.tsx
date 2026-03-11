@@ -950,16 +950,15 @@ aria-label="Patreon"
                 <div className="absolute bottom-0 left-0 right-0 p-4 pb-5 md:p-6 md:pb-8">
                   {/* Added md:text-2xl to text size on tablet */}
                   <h1
-                    className="text-2xl md:text-3xl font-semibold mb-1.5 leading-[1.1] text-white drop-shadow-lg break-words line-clamp-2"
+                    className="text-4xl md:text-5xl font-semibold mb-4 leading-[1.08] text-white drop-shadow-lg break-words line-clamp-2"
                     style={
                       featuredTitleStyle
                         ? {
                             fontFamily: featuredTitleStyle.fontFamily,
                             fontSize: `${featuredTitleStyle.fontSizePx}px`,
-                            lineHeight: "1.1",
-                            minHeight: "2.2em",
+                            lineHeight: "1.08",
                           }
-                        : { minHeight: "2.2em" }
+                        : undefined
                     }
                   >
                     {featuredTitleText}
@@ -1006,16 +1005,15 @@ aria-label="Patreon"
                 ) : (
                   <>
                   <h1
-                    className="mt-6 text-5xl sm:text-6xl md:text-6xl lg:text-7xl font-semibold mb-2 md:mb-3 leading-[1.1] break-words max-w-[90%] sm:max-w-[85%] line-clamp-2"
+                    className="mt-3 translate-y-0 text-7xl sm:text-8xl md:text-8xl lg:text-9xl font-semibold mb-4 md:mb-5 leading-[1.03] break-words max-w-[90%] sm:max-w-[85%] line-clamp-2"
                     style={
                       featuredTitleStyle
                         ? {
                             fontFamily: featuredTitleStyle.fontFamily,
                             fontSize: `${featuredTitleStyle.fontSizePx}px`,
-                            lineHeight: "1.1",
-                            minHeight: "2.2em",
+                            lineHeight: "1.03",
                           }
-                        : { minHeight: "2.2em" }
+                        : undefined
                     }
                   >
   {featuredTitleText}
