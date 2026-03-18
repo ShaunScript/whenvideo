@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server"
 import moreVideosJson from "@/data/more-videos.json"
 import { getVideosByIds } from "@/lib/youtube-api"
+import { requireAdminAuth } from "@/lib/admin-auth"
 import {
   listMoreRows,
   addYouTubeIds,
@@ -89,6 +90,9 @@ export async function GET(request: Request) {
 
     // 1) Metadata lookup for specific IDs (admin uses this)
     if (videoIdsParam) {
+      const unauthorized = await requireAdminAuth()
+      if (unauthorized) return unauthorized
+
       const ids = JSON.parse(videoIdsParam)
       const videos = Array.isArray(ids) && ids.length ? await getVideosByIds(apiKey, ids) : []
       const normalized = videos.map(normalizeVideo)
@@ -146,6 +150,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const unauthorized = await requireAdminAuth()
+  if (unauthorized) return unauthorized
+
   try {
     const body = await request.json()
     const { video, videos: batchVideos } = body
@@ -197,6 +204,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const unauthorized = await requireAdminAuth()
+  if (unauthorized) return unauthorized
+
   try {
     const { searchParams } = new URL(request.url)
     const videoId = searchParams.get("videoId")
@@ -213,6 +223,9 @@ export async function DELETE(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const unauthorized = await requireAdminAuth()
+  if (unauthorized) return unauthorized
+
   try {
     const body = await request.json()
     const videoId = body?.videoId

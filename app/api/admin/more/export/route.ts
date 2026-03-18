@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server"
 import moreVideosJson from "@/data/more-videos.json"
+import { requireAdminAuth } from "@/lib/admin-auth"
 
 export async function GET() {
+  const unauthorized = await requireAdminAuth()
+  if (unauthorized) return unauthorized
+
   try {
     // Export videos from local JSON file
     const videosByChannel: Record<string, { id: string; url: string }[]> = {}

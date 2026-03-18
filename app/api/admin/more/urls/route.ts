@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getVideoUrlsFromBlob } from "@/lib/more-videos-sync"
+import { requireAdminAuth } from "@/lib/admin-auth"
 
 /**
  * GET /api/admin/more/urls
@@ -17,6 +18,9 @@ import { getVideoUrlsFromBlob } from "@/lib/more-videos-sync"
  * }
  */
 export async function GET() {
+  const unauthorized = await requireAdminAuth()
+  if (unauthorized) return unauthorized
+
   try {
     const data = await getVideoUrlsFromBlob()
 

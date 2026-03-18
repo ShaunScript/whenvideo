@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import path from "path"
 import fs from "fs/promises"
+import { requireAdminAuth } from "@/lib/admin-auth"
 
 export const runtime = "nodejs"
 
@@ -14,6 +15,9 @@ function sanitizeFileName(name: string) {
 }
 
 export async function GET() {
+  const unauthorized = await requireAdminAuth()
+  if (unauthorized) return unauthorized
+
   try {
     await fs.mkdir(FONT_DIR, { recursive: true })
     const files = await fs.readdir(FONT_DIR)
@@ -40,6 +44,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const unauthorized = await requireAdminAuth()
+  if (unauthorized) return unauthorized
+
   try {
     const form = await req.formData()
     const file = form.get("file") as File | null

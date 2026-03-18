@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server"
 import { fetchChannelVideos, fetchChannelVideosByHandle, filterLongVideos } from "@/lib/youtube-api"
+import { requireAdminAuth } from "@/lib/admin-auth"
 
 export const runtime = "nodejs"
 
 export async function GET() {
+  const unauthorized = await requireAdminAuth()
+  if (unauthorized) return unauthorized
+
   try {
     const apiKey = process.env.YOUTUBE_API_KEY
     if (!apiKey) {

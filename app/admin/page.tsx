@@ -165,7 +165,28 @@ export default function AdminPanel() {
   const [showPasswordDialog, setShowPasswordDialog] = useState(true)
   const [password, setPassword] = useState("")
   const [passwordError, setPasswordError] = useState("")
-  const ADMIN_PASSWORD = "AdminD26"
+
+  useEffect(() => {
+    let cancelled = false
+    const check = async () => {
+      try {
+        const res = await fetch("/api/admin/auth", { cache: "no-store" })
+        const data = await res.json().catch(() => null)
+        if (cancelled) return
+        if (res.ok && data?.authenticated) {
+          setIsAuthenticated(true)
+          setShowPasswordDialog(false)
+          setPasswordError("")
+        }
+      } catch {
+        // ignore; user can still manually enter password
+      }
+    }
+    check()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const showMessage = (type: "success" | "error", text: string) => {
     setMessage({ type, text })
@@ -203,14 +224,26 @@ export default function AdminPanel() {
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true)
-      setShowPasswordDialog(false)
-      setPasswordError("")
-    } else {
-      setPasswordError("Incorrect password. Please try again.")
-      setPassword("")
-    }
+    ;(async () => {
+      try {
+        const res = await fetch("/api/admin/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        })
+        const data = await res.json().catch(() => null)
+        if (res.ok) {
+          setIsAuthenticated(true)
+          setShowPasswordDialog(false)
+          setPasswordError("")
+          return
+        }
+        setPasswordError(data?.error || "Incorrect password. Please try again.")
+        setPassword("")
+      } catch {
+        setPasswordError("Failed to authenticate. Please try again.")
+      }
+    })()
   }
 
   // ===== Loaders (kept) =====

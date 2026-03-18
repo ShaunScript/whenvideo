@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { writeFeaturedThumb } from "@/lib/featured-thumbnail-cache"
+import { requireAdminAuth } from "@/lib/admin-auth"
 
 export const runtime = "nodejs"
 
@@ -14,6 +15,9 @@ const mimeFromExt: Record<string, string> = {
 }
 
 export async function POST(req: Request) {
+  const unauthorized = await requireAdminAuth()
+  if (unauthorized) return unauthorized
+
   try {
     const form = await req.formData()
     const file = form.get("file") as File | null
