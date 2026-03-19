@@ -13,10 +13,14 @@ export async function POST(req: Request) {
   if (unauthorized) return unauthorized
 
   const body = await req.json()
+  const offsetXPx = typeof body?.offsetXPx === "number" ? body.offsetXPx : 0
+  const offsetYPx = typeof body?.offsetYPx === "number" ? body.offsetYPx : 0
   await writeFeaturedTitleStyle({
     fontFamily: body.fontFamily,
     fontSizePx: body.fontSizePx,
     fontUrl: body.fontUrl ?? null,
+    offsetXPx,
+    offsetYPx,
   })
   return NextResponse.json({ success: true })
 }

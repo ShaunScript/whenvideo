@@ -93,6 +93,8 @@ export default function Home() {
     fontFamily: string
     fontSizePx: number
     fontUrl?: string | null
+    offsetXPx?: number
+    offsetYPx?: number
   } | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
   const [apiError, setApiError] = React.useState<string | null>(null)
@@ -264,6 +266,8 @@ export default function Home() {
               fontFamily: style.fontFamily,
               fontSizePx: style.fontSizePx,
               fontUrl: style.fontUrl ?? null,
+              offsetXPx: typeof style.offsetXPx === "number" ? style.offsetXPx : 0,
+              offsetYPx: typeof style.offsetYPx === "number" ? style.offsetYPx : 0,
             })
           } else {
             setFeaturedTitleStyle(null)
@@ -521,6 +525,36 @@ export default function Home() {
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
+  }, [])
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("adminPreview") !== "1") return
+
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return
+      const data = event.data as any
+      if (!data || typeof data !== "object") return
+      if (data.type !== "ADMIN_PREVIEW_FEATURED_TITLE_STYLE") return
+
+      const style = data?.payload?.style
+      if (style && typeof style.fontFamily === "string" && typeof style.fontSizePx === "number") {
+        setFeaturedTitleStyle({
+          fontFamily: style.fontFamily,
+          fontSizePx: style.fontSizePx,
+          fontUrl: style.fontUrl ?? null,
+          offsetXPx: typeof style.offsetXPx === "number" ? style.offsetXPx : 0,
+          offsetYPx: typeof style.offsetYPx === "number" ? style.offsetYPx : 0,
+        })
+      }
+
+      if (typeof data?.payload?.title === "string") {
+        setFeaturedTitleOverride(data.payload.title)
+      }
+    }
+
+    window.addEventListener("message", onMessage)
+    return () => window.removeEventListener("message", onMessage)
   }, [])
 
   if (isLoading) {
@@ -957,6 +991,10 @@ aria-label="Patreon"
                             fontFamily: featuredTitleStyle.fontFamily,
                             fontSize: `${featuredTitleStyle.fontSizePx}px`,
                             lineHeight: "1.08",
+                            transform:
+                              featuredTitleStyle.offsetXPx || featuredTitleStyle.offsetYPx
+                                ? `translate(${featuredTitleStyle.offsetXPx ?? 0}px, ${featuredTitleStyle.offsetYPx ?? 0}px)`
+                                : undefined,
                           }
                         : undefined
                     }
@@ -1012,6 +1050,10 @@ aria-label="Patreon"
                             fontFamily: featuredTitleStyle.fontFamily,
                             fontSize: `${featuredTitleStyle.fontSizePx}px`,
                             lineHeight: "1.03",
+                            transform:
+                              featuredTitleStyle.offsetXPx || featuredTitleStyle.offsetYPx
+                                ? `translate(${featuredTitleStyle.offsetXPx ?? 0}px, ${featuredTitleStyle.offsetYPx ?? 0}px)`
+                                : undefined,
                           }
                         : undefined
                     }

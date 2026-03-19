@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -112,6 +112,8 @@ export default function AdminPanel() {
   const [isFontEditorOpen, setIsFontEditorOpen] = useState(false)
   const [featuredTitleFont, setFeaturedTitleFont] = useState("")
   const [featuredTitleSize, setFeaturedTitleSize] = useState("")
+  const [featuredTitleOffsetX, setFeaturedTitleOffsetX] = useState("")
+  const [featuredTitleOffsetY, setFeaturedTitleOffsetY] = useState("")
   const [featuredTitleFontUrl, setFeaturedTitleFontUrl] = useState<string | null>(null)
   const [featuredTitleOverride, setFeaturedTitleOverride] = useState("")
   const [savedFeaturedTitleOverride, setSavedFeaturedTitleOverride] = useState<string | null>(null)
@@ -120,6 +122,8 @@ export default function AdminPanel() {
     fontFamily: string
     fontSizePx: number
     fontUrl?: string | null
+    offsetXPx?: number
+    offsetYPx?: number
   } | null>(null)
   const [uploadedFonts, setUploadedFonts] = useState<{ name: string; url: string; fileName: string }[]>([])
   const [selectedFontName, setSelectedFontName] = useState("")
@@ -127,6 +131,10 @@ export default function AdminPanel() {
   const [fontUploadFile, setFontUploadFile] = useState<File | null>(null)
   const [isUploadingFont, setIsUploadingFont] = useState(false)
   const [isSavingFeaturedTitleStyle, setIsSavingFeaturedTitleStyle] = useState(false)
+  const [previewViewport, setPreviewViewport] = useState<"desktop" | "mobile">("desktop")
+  const previewHostRef = useRef<HTMLDivElement | null>(null)
+  const previewFrameRef = useRef<HTMLIFrameElement | null>(null)
+  const [previewScale, setPreviewScale] = useState(1)
   type TabKey = "featured" | "more" | "current" | "game"
   const [activeTab, setActiveTab] = useState<TabKey>("featured")
   const tabs: { key: TabKey; label: string; panelId: string }[] = [
@@ -654,15 +662,21 @@ export default function AdminPanel() {
           fontFamily: data.fontFamily,
           fontSizePx: data.fontSizePx,
           fontUrl: data.fontUrl ?? null,
+          offsetXPx: typeof data.offsetXPx === "number" ? data.offsetXPx : 0,
+          offsetYPx: typeof data.offsetYPx === "number" ? data.offsetYPx : 0,
         })
         setFeaturedTitleFont(data.fontFamily)
         setFeaturedTitleSize(String(data.fontSizePx))
         setFeaturedTitleFontUrl(data.fontUrl ?? null)
+        setFeaturedTitleOffsetX(String(typeof data.offsetXPx === "number" ? data.offsetXPx : 0))
+        setFeaturedTitleOffsetY(String(typeof data.offsetYPx === "number" ? data.offsetYPx : 0))
       } else {
         setSavedFeaturedTitleStyle(null)
         setFeaturedTitleFont("")
         setFeaturedTitleSize("")
         setFeaturedTitleFontUrl(null)
+        setFeaturedTitleOffsetX("")
+        setFeaturedTitleOffsetY("")
       }
     } catch (error) {
       console.error("Failed to load featured title style:", error)
@@ -729,6 +743,8 @@ export default function AdminPanel() {
   const handleSaveFeaturedTitleStyle = async () => {
     const fontFamily = featuredTitleFont.trim()
     const sizeValue = Number.parseInt(featuredTitleSize, 10)
+    const offsetXValue = Number.parseInt(featuredTitleOffsetX || "0", 10)
+    const offsetYValue = Number.parseInt(featuredTitleOffsetY || "0", 10)
     if (!fontFamily) {
       showMessage("error", "Enter a font family")
       return
@@ -737,12 +753,26 @@ export default function AdminPanel() {
       showMessage("error", "Enter a font size between 12 and 200")
       return
     }
+    if (!Number.isFinite(offsetXValue) || offsetXValue < -800 || offsetXValue > 800) {
+      showMessage("error", "X offset must be between -800 and 800")
+      return
+    }
+    if (!Number.isFinite(offsetYValue) || offsetYValue < -800 || offsetYValue > 800) {
+      showMessage("error", "Y offset must be between -800 and 800")
+      return
+    }
     setIsSavingFeaturedTitleStyle(true)
     try {
       const res = await fetch("/api/admin/more/featured-title-style", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fontFamily, fontSizePx: sizeValue, fontUrl: featuredTitleFontUrl ?? null }),
+        body: JSON.stringify({
+          fontFamily,
+          fontSizePx: sizeValue,
+          fontUrl: featuredTitleFontUrl ?? null,
+          offsetXPx: offsetXValue,
+          offsetYPx: offsetYValue,
+        }),
       })
       if (!res.ok) throw new Error("Save failed")
       await loadFeaturedTitleStyle()
@@ -765,6 +795,8 @@ export default function AdminPanel() {
       setFeaturedTitleFont("")
       setFeaturedTitleSize("")
       setFeaturedTitleFontUrl(null)
+      setFeaturedTitleOffsetX("")
+      setFeaturedTitleOffsetY("")
       showMessage("success", "Featured title style cleared")
     } catch (error) {
       console.error("Failed to clear featured title style:", error)
@@ -1072,6 +1104,21 @@ export default function AdminPanel() {
 
   const previewFontFamily = featuredTitleFont.trim() || savedFeaturedTitleStyle?.fontFamily || ""
   const previewFontUrl = featuredTitleFontUrl || selectedFontUrl || savedFeaturedTitleStyle?.fontUrl || null
+  const previewFontSizePx = (() => {
+    const size = Number.parseInt(featuredTitleSize || "", 10)
+    if (Number.isFinite(size)) return size
+    return savedFeaturedTitleStyle?.fontSizePx ?? 48
+  })()
+  const previewOffsetXPx = (() => {
+    const x = Number.parseInt(featuredTitleOffsetX || "", 10)
+    if (Number.isFinite(x)) return x
+    return savedFeaturedTitleStyle?.offsetXPx ?? 0
+  })()
+  const previewOffsetYPx = (() => {
+    const y = Number.parseInt(featuredTitleOffsetY || "", 10)
+    if (Number.isFinite(y)) return y
+    return savedFeaturedTitleStyle?.offsetYPx ?? 0
+  })()
   const previewFontFaceCss =
     previewFontFamily && previewFontUrl
       ? (() => {
@@ -1088,6 +1135,50 @@ export default function AdminPanel() {
 `
         })()
       : ""
+
+  useEffect(() => {
+    const deviceWidth = previewViewport === "mobile" ? 390 : 1280
+    const computeScale = () => {
+      const host = previewHostRef.current
+      if (!host) return
+      const available = host.clientWidth
+      if (!available) return
+      setPreviewScale(Math.min(1, available / deviceWidth))
+    }
+    computeScale()
+    window.addEventListener("resize", computeScale)
+    return () => window.removeEventListener("resize", computeScale)
+  }, [previewViewport])
+
+  useEffect(() => {
+    const frameWin = previewFrameRef.current?.contentWindow
+    if (!frameWin) return
+
+    frameWin.postMessage(
+      {
+        type: "ADMIN_PREVIEW_FEATURED_TITLE_STYLE",
+        payload: {
+          style: {
+            fontFamily: previewFontFamily,
+            fontSizePx: previewFontSizePx,
+            fontUrl: previewFontUrl,
+            offsetXPx: previewOffsetXPx,
+            offsetYPx: previewOffsetYPx,
+          },
+          title: featuredTitleOverride || savedFeaturedTitleOverride || "",
+        },
+      },
+      window.location.origin,
+    )
+  }, [
+    previewFontFamily,
+    previewFontSizePx,
+    previewFontUrl,
+    previewOffsetXPx,
+    previewOffsetYPx,
+    featuredTitleOverride,
+    savedFeaturedTitleOverride,
+  ])
 
   // ===== Auth UI (kept) =====
   if (!isAuthenticated) {
@@ -1203,40 +1294,89 @@ export default function AdminPanel() {
             <div className="bg-black rounded-lg p-6 border border-zinc-800 space-y-6">
               <div className="grid lg:grid-cols-[1.1fr,1fr] gap-6">
                 <div className="space-y-4">
-                  <div className="relative aspect-video bg-black border border-zinc-800 rounded-lg overflow-hidden">
-                    {featuredOverride?.thumbnailUrl ? (
-                      <img
-                        src={featuredOverride.thumbnailUrl}
-                        alt="Featured thumbnail"
-                        className="absolute inset-0 h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-zinc-900" />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="px-6">
-                        <button
-                          type="button"
-                          onClick={() => setIsFontEditorOpen((prev) => !prev)}
-                          className="text-left text-white uppercase tracking-wide font-bold leading-[1.1] max-w-[70%] line-clamp-2"
-                          style={{
-                            fontFamily: previewFontFamily || "inherit",
-                            fontSize: `${Number.parseInt(featuredTitleSize || "", 10) ||
-                              savedFeaturedTitleStyle?.fontSizePx ||
-                              48}px`,
-                            minHeight: "2.2em",
-                          }}
-                        >
-                          {featuredTitleOverride || "TITLE"}
-                        </button>
-                      </div>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-sm font-semibold text-gray-200">Full-page preview</div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewViewport("desktop")}
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                          previewViewport === "desktop"
+                            ? "bg-red-600 text-white"
+                            : "bg-zinc-900 text-gray-300 hover:text-white border border-zinc-800"
+                        }`}
+                      >
+                        Desktop
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewViewport("mobile")}
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                          previewViewport === "mobile"
+                            ? "bg-red-600 text-white"
+                            : "bg-zinc-900 text-gray-300 hover:text-white border border-zinc-800"
+                        }`}
+                      >
+                        Mobile
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => previewFrameRef.current?.contentWindow?.location.reload()}
+                        className="rounded-full px-3 py-1.5 text-xs font-semibold bg-zinc-900 text-gray-300 hover:text-white border border-zinc-800"
+                      >
+                        Refresh
+                      </button>
                     </div>
                   </div>
-                  <div className="text-xs text-gray-400">
-                    Current video: {savedFeaturedVideoId ?? "Auto (most recent upload)"}
+
+                  <div ref={previewHostRef} className="relative rounded-lg border border-zinc-800 bg-black overflow-hidden">
+                    <div
+                      style={{
+                        width: previewViewport === "mobile" ? 390 : 1280,
+                        height: previewViewport === "mobile" ? 844 : 720,
+                        transform: `scale(${previewScale})`,
+                        transformOrigin: "top left",
+                      }}
+                    >
+                      <iframe
+                        ref={previewFrameRef}
+                        title="Homepage preview"
+                        src="/?adminPreview=1"
+                        className="border-0 bg-black"
+                        style={{
+                          width: previewViewport === "mobile" ? 390 : 1280,
+                          height: previewViewport === "mobile" ? 844 : 720,
+                        }}
+                        onLoad={() => {
+                          const frameWin = previewFrameRef.current?.contentWindow
+                          if (!frameWin) return
+                          frameWin.postMessage(
+                            {
+                              type: "ADMIN_PREVIEW_FEATURED_TITLE_STYLE",
+                              payload: {
+                                style: {
+                                  fontFamily: previewFontFamily,
+                                  fontSizePx: previewFontSizePx,
+                                  fontUrl: previewFontUrl,
+                                  offsetXPx: previewOffsetXPx,
+                                  offsetYPx: previewOffsetYPx,
+                                },
+                                title: featuredTitleOverride || savedFeaturedTitleOverride || "",
+                              },
+                            },
+                            window.location.origin,
+                          )
+                        }}
+                      />
+                    </div>
                   </div>
+
+                  <div className="text-xs text-gray-400">
+                    Preview renders the real homepage layout at {previewViewport === "mobile" ? 390 : 1280}px width. Changes
+                    update live; click Save to persist.
+                  </div>
+
+                  <div className="text-xs text-gray-400">Current video: {savedFeaturedVideoId ?? "Auto (most recent upload)"}</div>
                 </div>
 
                 <div className="space-y-5">
@@ -1294,6 +1434,14 @@ export default function AdminPanel() {
                         </Button>
                       )}
                     </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setIsFontEditorOpen((prev) => !prev)}
+                      className="w-full"
+                    >
+                      {isFontEditorOpen ? "Hide Title Style Editor" : "Edit Title Style (Font/Size/Position)"}
+                    </Button>
                   </div>
 
                   <div className="space-y-2">
@@ -1402,13 +1550,39 @@ export default function AdminPanel() {
                           type="range"
                           min={24}
                           max={200}
-                          value={Number.parseInt(featuredTitleSize || "", 10) || savedFeaturedTitleStyle?.fontSizePx || 48}
+                          value={previewFontSizePx}
                           onChange={(e) => setFeaturedTitleSize(e.target.value)}
                           className="w-full"
                         />
                         <div className="text-xs text-gray-400">
-                          {Number.parseInt(featuredTitleSize || "", 10) || savedFeaturedTitleStyle?.fontSizePx || 48}px
+                          {previewFontSizePx}px
                         </div>
+                      </div>
+
+                      <div className="space-y-2 pt-3">
+                        <Label className="text-white">Title X Offset</Label>
+                        <input
+                          type="range"
+                          min={-800}
+                          max={800}
+                          value={previewOffsetXPx}
+                          onChange={(e) => setFeaturedTitleOffsetX(e.target.value)}
+                          className="w-full"
+                        />
+                        <div className="text-xs text-gray-400">{previewOffsetXPx}px</div>
+                      </div>
+
+                      <div className="space-y-2 pt-3">
+                        <Label className="text-white">Title Y Offset</Label>
+                        <input
+                          type="range"
+                          min={-800}
+                          max={800}
+                          value={previewOffsetYPx}
+                          onChange={(e) => setFeaturedTitleOffsetY(e.target.value)}
+                          className="w-full"
+                        />
+                        <div className="text-xs text-gray-400">{previewOffsetYPx}px</div>
                       </div>
                     </div>
                   </div>
