@@ -135,6 +135,7 @@ export default function AdminPanel() {
   const previewHostRef = useRef<HTMLDivElement | null>(null)
   const previewFrameRef = useRef<HTMLIFrameElement | null>(null)
   const [previewScale, setPreviewScale] = useState(1)
+  const [isSavingFeaturedAll, setIsSavingFeaturedAll] = useState(false)
   type TabKey = "featured" | "more" | "current" | "game"
   const [activeTab, setActiveTab] = useState<TabKey>("featured")
   const tabs: { key: TabKey; label: string; panelId: string }[] = [
@@ -546,6 +547,136 @@ export default function AdminPanel() {
       showMessage("error", "Failed to save featured video override")
     } finally {
       setIsSavingFeaturedVideo(false)
+    }
+  }
+
+  const handleSaveFeaturedAll = async () => {
+    if (isSavingFeaturedAll) return
+
+    const pending: Array<() => Promise<void>> = []
+
+    const nextVideoId = featuredVideoUrl.trim() ? extractYouTubeVideoId(featuredVideoUrl) : null
+    if (featuredVideoUrl.trim() && !nextVideoId) {
+      showMessage("error", "Enter a valid YouTube link or video ID")
+      return
+    }
+
+    const nextTitle = featuredTitleOverride.trim()
+    const nextThumbUrl = featuredThumbUrl.trim()
+
+    const nextFontFamily = featuredTitleFont.trim()
+    const nextFontSizePx = Number.parseInt(featuredTitleSize || "", 10)
+    const nextOffsetXPx = Number.parseInt(featuredTitleOffsetX || "0", 10)
+    const nextOffsetYPx = Number.parseInt(featuredTitleOffsetY || "0", 10)
+
+    if (nextVideoId && nextVideoId !== savedFeaturedVideoId) {
+      pending.push(async () => {
+        const res = await fetch("/api/admin/more/featured-video", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ videoId: nextVideoId }),
+        })
+        if (!res.ok) throw new Error("Failed to save featured video override")
+        setFeaturedVideoUrl("")
+        await loadFeaturedVideoOverride()
+      })
+    }
+
+    if (nextTitle && nextTitle !== (savedFeaturedTitleOverride ?? "")) {
+      pending.push(async () => {
+        const res = await fetch("/api/admin/more/featured-title", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: nextTitle }),
+        })
+        if (!res.ok) throw new Error("Failed to save featured title override")
+        await loadFeaturedTitleOverride()
+      })
+    }
+
+    const styleChanged =
+      nextFontFamily &&
+      Number.isFinite(nextFontSizePx) &&
+      (nextFontFamily !== (savedFeaturedTitleStyle?.fontFamily ?? "") ||
+        nextFontSizePx !== (savedFeaturedTitleStyle?.fontSizePx ?? 0) ||
+        (featuredTitleFontUrl ?? null) !== (savedFeaturedTitleStyle?.fontUrl ?? null) ||
+        nextOffsetXPx !== (savedFeaturedTitleStyle?.offsetXPx ?? 0) ||
+        nextOffsetYPx !== (savedFeaturedTitleStyle?.offsetYPx ?? 0))
+
+    if (styleChanged) {
+      if (nextFontSizePx < 12 || nextFontSizePx > 200) {
+        showMessage("error", "Enter a font size between 12 and 200")
+        return
+      }
+      if (!Number.isFinite(nextOffsetXPx) || nextOffsetXPx < -800 || nextOffsetXPx > 800) {
+        showMessage("error", "X offset must be between -800 and 800")
+        return
+      }
+      if (!Number.isFinite(nextOffsetYPx) || nextOffsetYPx < -800 || nextOffsetYPx > 800) {
+        showMessage("error", "Y offset must be between -800 and 800")
+        return
+      }
+
+      pending.push(async () => {
+        const res = await fetch("/api/admin/more/featured-title-style", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fontFamily: nextFontFamily,
+            fontSizePx: nextFontSizePx,
+            fontUrl: featuredTitleFontUrl ?? null,
+            offsetXPx: nextOffsetXPx,
+            offsetYPx: nextOffsetYPx,
+          }),
+        })
+        if (!res.ok) throw new Error("Failed to save featured title style")
+        await loadFeaturedTitleStyle()
+      })
+    }
+
+    if (featuredThumbFile) {
+      pending.push(async () => {
+        const fd = new FormData()
+        fd.append("file", featuredThumbFile)
+        const res = await fetch("/api/admin/more/featured-thumbmail/upload", { method: "POST", body: fd })
+        const json = await res.json().catch(() => null)
+        if (!res.ok || !json?.success) {
+          const msg = json?.error || "Failed to upload thumbnail"
+          throw new Error(msg)
+        }
+        setFeaturedThumbFile(null)
+        setFeaturedThumbUrl("")
+        await loadFeaturedOverride()
+      })
+    } else if (nextThumbUrl) {
+      pending.push(async () => {
+        const res = await fetch("/api/admin/more/featured-thumbmail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ thumbnailUrl: nextThumbUrl }),
+        })
+        if (!res.ok) throw new Error("Failed to save featured thumbnail")
+        setFeaturedThumbUrl("")
+        await loadFeaturedOverride()
+      })
+    }
+
+    if (pending.length === 0) {
+      showMessage("success", "No changes to save")
+      return
+    }
+
+    setIsSavingFeaturedAll(true)
+    try {
+      for (const task of pending) {
+        await task()
+      }
+      showMessage("success", "Saved featured changes")
+    } catch (error) {
+      console.error("Failed to save featured changes:", error)
+      showMessage("error", error instanceof Error ? error.message : "Failed to save changes")
+    } finally {
+      setIsSavingFeaturedAll(false)
     }
   }
 
@@ -1292,93 +1423,93 @@ export default function AdminPanel() {
           <section id="tab-panel-featured" role="tabpanel" aria-labelledby="tab-featured" className="mb-12">
             <h2 className="text-xl font-semibold mb-4">Featured Video Editor</h2>
             <div className="bg-black rounded-lg p-6 border border-zinc-800 space-y-6">
-              <div className="grid lg:grid-cols-[1.1fr,1fr] gap-6">
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="text-sm font-semibold text-gray-200">Full-page preview</div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setPreviewViewport("desktop")}
-                        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                          previewViewport === "desktop"
-                            ? "bg-red-600 text-white"
-                            : "bg-zinc-900 text-gray-300 hover:text-white border border-zinc-800"
-                        }`}
-                      >
-                        Desktop
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPreviewViewport("mobile")}
-                        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                          previewViewport === "mobile"
-                            ? "bg-red-600 text-white"
-                            : "bg-zinc-900 text-gray-300 hover:text-white border border-zinc-800"
-                        }`}
-                      >
-                        Mobile
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => previewFrameRef.current?.contentWindow?.location.reload()}
-                        className="rounded-full px-3 py-1.5 text-xs font-semibold bg-zinc-900 text-gray-300 hover:text-white border border-zinc-800"
-                      >
-                        Refresh
-                      </button>
-                    </div>
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-sm font-semibold text-gray-200">Full-page preview</div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewViewport("desktop")}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                        previewViewport === "desktop"
+                          ? "bg-red-600 text-white"
+                          : "bg-zinc-900 text-gray-300 hover:text-white border border-zinc-800"
+                      }`}
+                    >
+                      Desktop
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewViewport("mobile")}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                        previewViewport === "mobile"
+                          ? "bg-red-600 text-white"
+                          : "bg-zinc-900 text-gray-300 hover:text-white border border-zinc-800"
+                      }`}
+                    >
+                      Mobile
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => previewFrameRef.current?.contentWindow?.location.reload()}
+                      className="rounded-full px-3 py-1.5 text-xs font-semibold bg-zinc-900 text-gray-300 hover:text-white border border-zinc-800"
+                    >
+                      Refresh
+                    </button>
                   </div>
+                </div>
 
-                  <div ref={previewHostRef} className="relative rounded-lg border border-zinc-800 bg-black overflow-hidden">
-                    <div
+                <div ref={previewHostRef} className="relative rounded-lg border border-zinc-800 bg-black overflow-hidden">
+                  <div
+                    style={{
+                      width: previewViewport === "mobile" ? 390 : 1280,
+                      height: previewViewport === "mobile" ? 844 : 720,
+                      transform: `scale(${previewScale})`,
+                      transformOrigin: "top left",
+                    }}
+                  >
+                    <iframe
+                      ref={previewFrameRef}
+                      title="Homepage preview"
+                      src="/?adminPreview=1"
+                      className="border-0 bg-black"
                       style={{
                         width: previewViewport === "mobile" ? 390 : 1280,
                         height: previewViewport === "mobile" ? 844 : 720,
-                        transform: `scale(${previewScale})`,
-                        transformOrigin: "top left",
                       }}
-                    >
-                      <iframe
-                        ref={previewFrameRef}
-                        title="Homepage preview"
-                        src="/?adminPreview=1"
-                        className="border-0 bg-black"
-                        style={{
-                          width: previewViewport === "mobile" ? 390 : 1280,
-                          height: previewViewport === "mobile" ? 844 : 720,
-                        }}
-                        onLoad={() => {
-                          const frameWin = previewFrameRef.current?.contentWindow
-                          if (!frameWin) return
-                          frameWin.postMessage(
-                            {
-                              type: "ADMIN_PREVIEW_FEATURED_TITLE_STYLE",
-                              payload: {
-                                style: {
-                                  fontFamily: previewFontFamily,
-                                  fontSizePx: previewFontSizePx,
-                                  fontUrl: previewFontUrl,
-                                  offsetXPx: previewOffsetXPx,
-                                  offsetYPx: previewOffsetYPx,
-                                },
-                                title: featuredTitleOverride || savedFeaturedTitleOverride || "",
+                      onLoad={() => {
+                        const frameWin = previewFrameRef.current?.contentWindow
+                        if (!frameWin) return
+                        frameWin.postMessage(
+                          {
+                            type: "ADMIN_PREVIEW_FEATURED_TITLE_STYLE",
+                            payload: {
+                              style: {
+                                fontFamily: previewFontFamily,
+                                fontSizePx: previewFontSizePx,
+                                fontUrl: previewFontUrl,
+                                offsetXPx: previewOffsetXPx,
+                                offsetYPx: previewOffsetYPx,
                               },
+                              title: featuredTitleOverride || savedFeaturedTitleOverride || "",
                             },
-                            window.location.origin,
-                          )
-                        }}
-                      />
-                    </div>
+                          },
+                          window.location.origin,
+                        )
+                      }}
+                    />
                   </div>
-
-                  <div className="text-xs text-gray-400">
-                    Preview renders the real homepage layout at {previewViewport === "mobile" ? 390 : 1280}px width. Changes
-                    update live; click Save to persist.
-                  </div>
-
-                  <div className="text-xs text-gray-400">Current video: {savedFeaturedVideoId ?? "Auto (most recent upload)"}</div>
                 </div>
 
+                <div className="text-xs text-gray-400">
+                  Preview renders the real homepage layout at {previewViewport === "mobile" ? 390 : 1280}px width. Changes update
+                  live; click Save Changes to persist.
+                </div>
+
+                <div className="text-xs text-gray-400">Current video: {savedFeaturedVideoId ?? "Auto (most recent upload)"}</div>
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-2">
                 <div className="space-y-5">
                   <div className="space-y-2">
                     <Label className="text-white">Featured video override (YouTube link or ID)</Label>
@@ -1389,13 +1520,6 @@ export default function AdminPanel() {
                       placeholder="https://www.youtube.com/watch?v=..."
                     />
                     <div className="flex gap-3">
-                      <Button
-                        onClick={handleSaveFeaturedVideo}
-                        disabled={isSavingFeaturedVideo}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        {isSavingFeaturedVideo ? "Saving..." : "Save Video"}
-                      </Button>
                       {savedFeaturedVideoId && (
                         <Button
                           onClick={handleClearFeaturedVideo}
@@ -1417,13 +1541,6 @@ export default function AdminPanel() {
                       placeholder="TITLE"
                     />
                     <div className="flex gap-3">
-                      <Button
-                        onClick={handleSaveFeaturedTitleOverride}
-                        disabled={isSavingFeaturedTitleOverride}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        {isSavingFeaturedTitleOverride ? "Saving..." : "Save Title"}
-                      </Button>
                       {savedFeaturedTitleOverride && (
                         <Button
                           onClick={handleClearFeaturedTitleOverride}
@@ -1443,7 +1560,9 @@ export default function AdminPanel() {
                       {isFontEditorOpen ? "Hide Title Style Editor" : "Edit Title Style (Font/Size/Position)"}
                     </Button>
                   </div>
+                </div>
 
+                <div className="space-y-5">
                   <div className="space-y-2">
                     <Label className="text-white">Featured thumbnail URL</Label>
                     <Input
@@ -1453,15 +1572,8 @@ export default function AdminPanel() {
                       placeholder="https://..."
                     />
                     <div className="flex gap-3">
-                      <Button
-                        onClick={handleSaveFeaturedOverride}
-                        disabled={isSavingFeatured}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        {isSavingFeatured ? "Saving..." : "Save Thumbnail"}
-                      </Button>
                       {featuredOverride?.thumbnailUrl && (
-                        <Button onClick={handleClearFeaturedOverride} variant="secondary" disabled={isSavingFeatured}>
+                        <Button onClick={handleClearFeaturedOverride} variant="secondary" disabled={isSavingFeaturedAll}>
                           Clear
                         </Button>
                       )}
@@ -1481,18 +1593,19 @@ export default function AdminPanel() {
                         >
                           Choose File
                         </label>
-                        <span className="text-sm text-gray-400 truncate">
-                          {featuredThumbFile?.name ?? "No file chosen"}
-                        </span>
+                        <span className="text-sm text-gray-400 truncate">{featuredThumbFile?.name ?? "No file chosen"}</span>
                       </div>
-                      <Button
-                        onClick={handleUploadFeaturedThumb}
-                        disabled={isUploadingFeatured}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        {isUploadingFeatured ? "Uploading..." : "Upload Thumbnail"}
-                      </Button>
+                      <div className="text-xs text-gray-400">Paste a URL or choose a file, then click Save Changes.</div>
                     </div>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-2 flex flex-wrap items-center gap-3 pt-2">
+                  <Button onClick={handleSaveFeaturedAll} disabled={isSavingFeaturedAll} className="bg-red-600 hover:bg-red-700">
+                    {isSavingFeaturedAll ? "Saving..." : "Save Changes"}
+                  </Button>
+                  <div className="text-xs text-gray-400">
+                    Saves: video override, title override, thumbnail (URL or file), and title style (if changed).
                   </div>
                 </div>
               </div>
@@ -1588,22 +1701,12 @@ export default function AdminPanel() {
                   </div>
 
                   <div className="flex gap-3">
-                    <Button
-                      onClick={handleSaveFeaturedTitleStyle}
-                      disabled={isSavingFeaturedTitleStyle}
-                      className="bg-red-600 hover:bg-red-700"
-                    >
-                      {isSavingFeaturedTitleStyle ? "Saving..." : "Save Title Style"}
-                    </Button>
                     {savedFeaturedTitleStyle && (
-                      <Button
-                        onClick={handleClearFeaturedTitleStyle}
-                        variant="secondary"
-                        disabled={isSavingFeaturedTitleStyle}
-                      >
+                      <Button onClick={handleClearFeaturedTitleStyle} variant="secondary" disabled={isSavingFeaturedAll}>
                         Clear
                       </Button>
                     )}
+                    <div className="text-xs text-gray-400 self-center">Adjust sliders, then click Save Changes below the preview.</div>
                   </div>
                 </div>
               )}
