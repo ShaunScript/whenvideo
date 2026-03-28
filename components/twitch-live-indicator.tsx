@@ -13,9 +13,18 @@ export function TwitchLiveIndicator({ channelName }: TwitchLiveIndicatorProps) {
   React.useEffect(() => {
     const checkLiveStatus = async () => {
       try {
-        const response = await fetch(`/api/twitch-live?channel=${channelName}`)
-        const data = await response.json()
-        setIsLive(data.isLive)
+        const response = await fetch(`/api/twitch-live?channel=${encodeURIComponent(channelName)}`, { cache: "no-store" })
+        const text = await response.text()
+        let data: any = null
+        try {
+          data = JSON.parse(text)
+        } catch {
+          data = null
+        }
+        if (!response.ok) {
+          throw new Error(data?.error || `Request failed (${response.status})`)
+        }
+        setIsLive(Boolean(data?.isLive))
       } catch (error) {
         console.error("Failed to check Twitch live status:", error)
         setIsLive(false)

@@ -135,6 +135,8 @@ export default function AdminPanel() {
   const previewHostRef = useRef<HTMLDivElement | null>(null)
   const previewFrameRef = useRef<HTMLIFrameElement | null>(null)
   const [previewScale, setPreviewScale] = useState(1)
+  const [desktopPreviewHeight, setDesktopPreviewHeight] = useState(720)
+  const [didLoadFeaturedTitleStyle, setDidLoadFeaturedTitleStyle] = useState(false)
   const [isSavingFeaturedAll, setIsSavingFeaturedAll] = useState(false)
   type TabKey = "featured" | "more" | "current" | "game"
   const [activeTab, setActiveTab] = useState<TabKey>("featured")
@@ -564,10 +566,47 @@ export default function AdminPanel() {
     const nextTitle = featuredTitleOverride.trim()
     const nextThumbUrl = featuredThumbUrl.trim()
 
-    const nextFontFamily = featuredTitleFont.trim()
-    const nextFontSizePx = Number.parseInt(featuredTitleSize || "", 10)
-    const nextOffsetXPx = Number.parseInt(featuredTitleOffsetX || "0", 10)
-    const nextOffsetYPx = Number.parseInt(featuredTitleOffsetY || "0", 10)
+    const hasStyleDraft =
+      !!savedFeaturedTitleStyle ||
+      !!featuredTitleFont.trim() ||
+      !!featuredTitleSize.trim() ||
+      !!featuredTitleOffsetX.trim() ||
+      !!featuredTitleOffsetY.trim() ||
+      featuredTitleFontUrl != null
+
+    const draftFontFamily = featuredTitleFont.trim()
+    const draftFontUrl = featuredTitleFontUrl ?? selectedFontUrl ?? null
+
+    const nextFontFamily = (() => {
+      if (draftFontFamily) return draftFontFamily
+      if (savedFeaturedTitleStyle?.fontFamily) return savedFeaturedTitleStyle.fontFamily
+      return ""
+    })()
+
+    const nextFontUrl = (() => {
+      const savedFamily = savedFeaturedTitleStyle?.fontFamily ?? ""
+      // If the user changed the font family, don't implicitly keep the old URL.
+      if (draftFontFamily && draftFontFamily !== savedFamily) return draftFontUrl
+      return draftFontUrl ?? savedFeaturedTitleStyle?.fontUrl ?? null
+    })()
+
+    const nextFontSizePx = (() => {
+      const parsed = Number.parseInt(featuredTitleSize || "", 10)
+      if (Number.isFinite(parsed)) return parsed
+      return savedFeaturedTitleStyle?.fontSizePx ?? 48
+    })()
+
+    const nextOffsetXPx = (() => {
+      const parsed = Number.parseInt(featuredTitleOffsetX || "", 10)
+      if (Number.isFinite(parsed)) return parsed
+      return savedFeaturedTitleStyle?.offsetXPx ?? 0
+    })()
+
+    const nextOffsetYPx = (() => {
+      const parsed = Number.parseInt(featuredTitleOffsetY || "", 10)
+      if (Number.isFinite(parsed)) return parsed
+      return savedFeaturedTitleStyle?.offsetYPx ?? 0
+    })()
 
     if (nextVideoId && nextVideoId !== savedFeaturedVideoId) {
       pending.push(async () => {
@@ -595,15 +634,22 @@ export default function AdminPanel() {
     }
 
     const styleChanged =
-      nextFontFamily &&
-      Number.isFinite(nextFontSizePx) &&
+      hasStyleDraft &&
       (nextFontFamily !== (savedFeaturedTitleStyle?.fontFamily ?? "") ||
         nextFontSizePx !== (savedFeaturedTitleStyle?.fontSizePx ?? 0) ||
-        (featuredTitleFontUrl ?? null) !== (savedFeaturedTitleStyle?.fontUrl ?? null) ||
+        (nextFontUrl ?? null) !== (savedFeaturedTitleStyle?.fontUrl ?? null) ||
         nextOffsetXPx !== (savedFeaturedTitleStyle?.offsetXPx ?? 0) ||
         nextOffsetYPx !== (savedFeaturedTitleStyle?.offsetYPx ?? 0))
 
     if (styleChanged) {
+      if (!didLoadFeaturedTitleStyle && !savedFeaturedTitleStyle && !featuredTitleFont.trim() && featuredTitleFontUrl == null) {
+        showMessage("error", "Title style hasn't loaded yet—refresh and try again")
+        return
+      }
+      if (!nextFontFamily) {
+        showMessage("error", "Select a font (or load the saved one) before saving style changes")
+        return
+      }
       if (nextFontSizePx < 12 || nextFontSizePx > 200) {
         showMessage("error", "Enter a font size between 12 and 200")
         return
@@ -624,7 +670,7 @@ export default function AdminPanel() {
           body: JSON.stringify({
             fontFamily: nextFontFamily,
             fontSizePx: nextFontSizePx,
-            fontUrl: featuredTitleFontUrl ?? null,
+            fontUrl: nextFontUrl ?? null,
             offsetXPx: nextOffsetXPx,
             offsetYPx: nextOffsetYPx,
           }),
@@ -788,6 +834,7 @@ export default function AdminPanel() {
       if (!res.ok) throw new Error("Failed to fetch featured title style")
       const json = await res.json()
       const data = json?.data ?? null
+      setDidLoadFeaturedTitleStyle(true)
       if (data?.fontFamily && data?.fontSizePx) {
         setSavedFeaturedTitleStyle({
           fontFamily: data.fontFamily,
@@ -811,7 +858,7 @@ export default function AdminPanel() {
       }
     } catch (error) {
       console.error("Failed to load featured title style:", error)
-      setSavedFeaturedTitleStyle(null)
+      // Keep whatever was previously loaded to avoid resetting the UI on transient dev errors.
     }
   }
 
@@ -872,7 +919,7 @@ export default function AdminPanel() {
   }
 
   const handleSaveFeaturedTitleStyle = async () => {
-    const fontFamily = featuredTitleFont.trim()
+    const fontFamily = featuredTitleFont.trim() || savedFeaturedTitleStyle?.fontFamily || ""
     const sizeValue = Number.parseInt(featuredTitleSize, 10)
     const offsetXValue = Number.parseInt(featuredTitleOffsetX || "0", 10)
     const offsetYValue = Number.parseInt(featuredTitleOffsetY || "0", 10)
@@ -894,13 +941,20 @@ export default function AdminPanel() {
     }
     setIsSavingFeaturedTitleStyle(true)
     try {
+      const savedFamily = savedFeaturedTitleStyle?.fontFamily ?? ""
+      const draftUrl = featuredTitleFontUrl ?? selectedFontUrl ?? null
+      const fontUrl =
+        featuredTitleFont.trim() && featuredTitleFont.trim() !== savedFamily
+          ? draftUrl
+          : draftUrl ?? savedFeaturedTitleStyle?.fontUrl ?? null
+
       const res = await fetch("/api/admin/more/featured-title-style", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fontFamily,
           fontSizePx: sizeValue,
-          fontUrl: featuredTitleFontUrl ?? null,
+          fontUrl,
           offsetXPx: offsetXValue,
           offsetYPx: offsetYValue,
         }),
@@ -1233,7 +1287,12 @@ export default function AdminPanel() {
     }
   }
 
-  const previewFontFamily = featuredTitleFont.trim() || savedFeaturedTitleStyle?.fontFamily || ""
+  const previewFontFamily = (() => {
+    const draft = featuredTitleFont.trim()
+    if (draft) return draft
+    if (savedFeaturedTitleStyle?.fontFamily) return savedFeaturedTitleStyle.fontFamily
+    return "inherit"
+  })()
   const previewFontUrl = featuredTitleFontUrl || selectedFontUrl || savedFeaturedTitleStyle?.fontUrl || null
   const previewFontSizePx = (() => {
     const size = Number.parseInt(featuredTitleSize || "", 10)
@@ -1250,6 +1309,13 @@ export default function AdminPanel() {
     if (Number.isFinite(y)) return y
     return savedFeaturedTitleStyle?.offsetYPx ?? 0
   })()
+  const previewHasTitleStyleOverride =
+    !!savedFeaturedTitleStyle ||
+    !!featuredTitleFont.trim() ||
+    !!featuredTitleSize.trim() ||
+    !!featuredTitleOffsetX.trim() ||
+    !!featuredTitleOffsetY.trim() ||
+    featuredTitleFontUrl != null
   const previewFontFaceCss =
     previewFontFamily && previewFontUrl
       ? (() => {
@@ -1268,17 +1334,32 @@ export default function AdminPanel() {
       : ""
 
   useEffect(() => {
-    const deviceWidth = previewViewport === "mobile" ? 390 : 1280
+    const computeDesktopHeight = () => {
+      const safeWidth = Math.max(1, window.innerWidth || 1)
+      const safeHeight = Math.max(1, window.innerHeight || 1)
+      const ratio = safeHeight / safeWidth
+      const raw = Math.round(1280 * ratio)
+      const clamped = Math.max(640, Math.min(900, raw))
+      setDesktopPreviewHeight(clamped)
+    }
+
     const computeScale = () => {
       const host = previewHostRef.current
       if (!host) return
       const available = host.clientWidth
       if (!available) return
+      const deviceWidth = previewViewport === "mobile" ? 390 : 1280
       setPreviewScale(Math.min(1, available / deviceWidth))
     }
+
+    computeDesktopHeight()
     computeScale()
-    window.addEventListener("resize", computeScale)
-    return () => window.removeEventListener("resize", computeScale)
+    const onResize = () => {
+      computeDesktopHeight()
+      computeScale()
+    }
+    window.addEventListener("resize", onResize)
+    return () => window.removeEventListener("resize", onResize)
   }, [previewViewport])
 
   useEffect(() => {
@@ -1289,13 +1370,17 @@ export default function AdminPanel() {
       {
         type: "ADMIN_PREVIEW_FEATURED_TITLE_STYLE",
         payload: {
-          style: {
-            fontFamily: previewFontFamily,
-            fontSizePx: previewFontSizePx,
-            fontUrl: previewFontUrl,
-            offsetXPx: previewOffsetXPx,
-            offsetYPx: previewOffsetYPx,
-          },
+          style: previewHasTitleStyleOverride
+            ? {
+                fontFamily: previewFontFamily,
+                fontSizePx: previewFontSizePx,
+                fontUrl: previewFontUrl,
+                offsetXPx: previewOffsetXPx,
+                offsetYPx: previewOffsetYPx,
+              }
+            : didLoadFeaturedTitleStyle
+              ? null
+              : undefined,
           title: featuredTitleOverride || savedFeaturedTitleOverride || "",
         },
       },
@@ -1307,6 +1392,8 @@ export default function AdminPanel() {
     previewFontUrl,
     previewOffsetXPx,
     previewOffsetYPx,
+    previewHasTitleStyleOverride,
+    didLoadFeaturedTitleStyle,
     featuredTitleOverride,
     savedFeaturedTitleOverride,
   ])
@@ -1459,11 +1546,19 @@ export default function AdminPanel() {
                   </div>
                 </div>
 
-                <div ref={previewHostRef} className="relative rounded-lg border border-zinc-800 bg-black overflow-hidden">
+                <div
+                  ref={previewHostRef}
+                  className="relative rounded-lg border border-zinc-800 bg-black overflow-hidden"
+                  style={{
+                    height:
+                      (previewViewport === "mobile" ? 844 : desktopPreviewHeight) *
+                      previewScale,
+                  }}
+                >
                   <div
                     style={{
                       width: previewViewport === "mobile" ? 390 : 1280,
-                      height: previewViewport === "mobile" ? 844 : 720,
+                      height: previewViewport === "mobile" ? 844 : desktopPreviewHeight,
                       transform: `scale(${previewScale})`,
                       transformOrigin: "top left",
                     }}
@@ -1475,7 +1570,7 @@ export default function AdminPanel() {
                       className="border-0 bg-black"
                       style={{
                         width: previewViewport === "mobile" ? 390 : 1280,
-                        height: previewViewport === "mobile" ? 844 : 720,
+                        height: previewViewport === "mobile" ? 844 : desktopPreviewHeight,
                       }}
                       onLoad={() => {
                         const frameWin = previewFrameRef.current?.contentWindow
@@ -1484,13 +1579,17 @@ export default function AdminPanel() {
                           {
                             type: "ADMIN_PREVIEW_FEATURED_TITLE_STYLE",
                             payload: {
-                              style: {
-                                fontFamily: previewFontFamily,
-                                fontSizePx: previewFontSizePx,
-                                fontUrl: previewFontUrl,
-                                offsetXPx: previewOffsetXPx,
-                                offsetYPx: previewOffsetYPx,
-                              },
+                              style: previewHasTitleStyleOverride
+                                ? {
+                                    fontFamily: previewFontFamily,
+                                    fontSizePx: previewFontSizePx,
+                                    fontUrl: previewFontUrl,
+                                    offsetXPx: previewOffsetXPx,
+                                    offsetYPx: previewOffsetYPx,
+                                  }
+                                : didLoadFeaturedTitleStyle
+                                  ? null
+                                  : undefined,
                               title: featuredTitleOverride || savedFeaturedTitleOverride || "",
                             },
                           },
@@ -1502,8 +1601,9 @@ export default function AdminPanel() {
                 </div>
 
                 <div className="text-xs text-gray-400">
-                  Preview renders the real homepage layout at {previewViewport === "mobile" ? 390 : 1280}px width. Changes update
-                  live; click Save Changes to persist.
+                  Preview renders the real homepage layout at {previewViewport === "mobile" ? 390 : 1280}px width and{" "}
+                  {previewViewport === "mobile" ? 844 : desktopPreviewHeight}px height. Changes update live; click Save Changes
+                  to persist.
                 </div>
 
                 <div className="text-xs text-gray-400">Current video: {savedFeaturedVideoId ?? "Auto (most recent upload)"}</div>

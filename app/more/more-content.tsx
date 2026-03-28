@@ -167,9 +167,9 @@ export default function MoreContent() {
             </Button>
 
             {/* ✅ Swapped font for the title to match carousel headings */}
-            <h1 className="font-display uppercase tracking-normal text-2xl md:text-3xl">
-  More
-</h1>
+            <h1 className="font-sans font-bold text-xl md:text-2xl">
+              More
+            </h1>
 
           </div>
           <div className="text-gray-400">

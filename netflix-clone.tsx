@@ -223,6 +223,8 @@ export default function Home() {
     async function loadData() {
       try {
         setIsLoading(true)
+        const isAdminPreview =
+          typeof window !== "undefined" && new URLSearchParams(window.location.search).get("adminPreview") === "1"
         const moreVideosFromStorage = await getMoreVideos()
         console.log("[v0] Home - More videos from Blob:", moreVideosFromStorage.length)
 
@@ -232,46 +234,50 @@ export default function Home() {
         setLongVideos(result.longVideos)
         setTvVideos(result.tvVideos)
         setFallbackFeaturedVideo(result.featuredVideo ?? null)
-        try {
-          const res = await fetch("/api/admin/more/featured-thumbmail", { cache: "no-store" })
-          const json = await res.json()
-          const override = json?.data
-        
-          setFeaturedThumbOverride(override?.thumbnailUrl ?? null)
-        } catch {}
-        try {
-          const descriptionRes = await fetch("/api/admin/more/featured-description", { cache: "no-store" })
-          const descriptionJson = await descriptionRes.json()
-          const descriptionOverride = descriptionJson?.data?.description
-          setFeaturedDescription(descriptionOverride || "")
-        } catch {
-          setFeaturedDescription("")
-        }
-        try {
-          const titleRes = await fetch("/api/admin/more/featured-title", { cache: "no-store" })
-          const titleJson = await titleRes.json()
-          const titleOverride = titleJson?.data?.title
-          setFeaturedTitleOverride(titleOverride || "")
-        } catch {
-          setFeaturedTitleOverride("")
-        }
-        try {
-          const styleRes = await fetch("/api/admin/more/featured-title-style", { cache: "no-store" })
-          const styleJson = await styleRes.json()
-          const style = styleJson?.data
-          if (style?.fontFamily && style?.fontSizePx) {
-            setFeaturedTitleStyle({
-              fontFamily: style.fontFamily,
-              fontSizePx: style.fontSizePx,
-              fontUrl: style.fontUrl ?? null,
-              offsetXPx: typeof style.offsetXPx === "number" ? style.offsetXPx : 0,
-              offsetYPx: typeof style.offsetYPx === "number" ? style.offsetYPx : 0,
-            })
-          } else {
+        // In admin preview mode, the admin panel postMessages the style/title.
+        // Avoid fetching overrides here so we don't overwrite the preview values after they apply.
+        if (!isAdminPreview) {
+          try {
+            const res = await fetch("/api/admin/more/featured-thumbmail", { cache: "no-store" })
+            const json = await res.json()
+            const override = json?.data
+
+            setFeaturedThumbOverride(override?.thumbnailUrl ?? null)
+          } catch {}
+          try {
+            const descriptionRes = await fetch("/api/admin/more/featured-description", { cache: "no-store" })
+            const descriptionJson = await descriptionRes.json()
+            const descriptionOverride = descriptionJson?.data?.description
+            setFeaturedDescription(descriptionOverride || "")
+          } catch {
+            setFeaturedDescription("")
+          }
+          try {
+            const titleRes = await fetch("/api/admin/more/featured-title", { cache: "no-store" })
+            const titleJson = await titleRes.json()
+            const titleOverride = titleJson?.data?.title
+            setFeaturedTitleOverride(titleOverride || "")
+          } catch {
+            setFeaturedTitleOverride("")
+          }
+          try {
+            const styleRes = await fetch("/api/admin/more/featured-title-style", { cache: "no-store" })
+            const styleJson = await styleRes.json()
+            const style = styleJson?.data
+            if (style?.fontFamily && style?.fontSizePx) {
+              setFeaturedTitleStyle({
+                fontFamily: style.fontFamily,
+                fontSizePx: style.fontSizePx,
+                fontUrl: style.fontUrl ?? null,
+                offsetXPx: typeof style.offsetXPx === "number" ? style.offsetXPx : 0,
+                offsetYPx: typeof style.offsetYPx === "number" ? style.offsetYPx : 0,
+              })
+            } else {
+              setFeaturedTitleStyle(null)
+            }
+          } catch {
             setFeaturedTitleStyle(null)
           }
-        } catch {
-          setFeaturedTitleStyle(null)
         }
         setApiError(null)
 
@@ -513,7 +519,9 @@ export default function Home() {
       if (data.type !== "ADMIN_PREVIEW_FEATURED_TITLE_STYLE") return
 
       const style = data?.payload?.style
-      if (style && typeof style.fontFamily === "string" && typeof style.fontSizePx === "number") {
+      if (style === null) {
+        setFeaturedTitleStyle(null)
+      } else if (style && typeof style.fontFamily === "string" && typeof style.fontSizePx === "number") {
         setFeaturedTitleStyle({
           fontFamily: style.fontFamily,
           fontSizePx: style.fontSizePx,
