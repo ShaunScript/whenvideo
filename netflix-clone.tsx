@@ -558,30 +558,10 @@ export default function Home() {
 
   const globalCss = `
 ${fontFaceCss}
-@keyframes featuredPan {
-  0% {
-    transform: translate3d(4%, 0, 0) scale(1.06);
-  }
-  100% {
-    transform: translate3d(-4%, 0, 0) scale(1.06);
-  }
-}
-
-.featured-pan {
-  animation: featuredPan 10s linear forwards;
-  will-change: transform;
-}
-
 .featured-layer {
   will-change: transform, opacity;
   /* Crop out top-of-thumbnail stamp text (e.g. month/year) */
   object-position: center 65%;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .featured-pan {
-    animation: none;
-  }
 }
   `
 
@@ -906,7 +886,7 @@ aria-label="Patreon"
           <>
             {/* Desktop featured layout - only on lg and up */}
             <div className="hidden lg:block absolute inset-0">
-                <div className="absolute inset-0 featured-pan">
+                <div className="absolute inset-0">
                   <Image
                     key={activeFeaturedVideo.id}
                     src={featuredThumbnail}
@@ -925,7 +905,7 @@ aria-label="Patreon"
               <div className="relative w-full max-w-full mx-auto md:max-w-4xl rounded-xl overflow-hidden shadow-2xl">
                 {/* Card image */}
                 <div className="relative aspect-[4/5] md:aspect-video w-full">
-                  <div className="absolute inset-0 featured-pan">
+                  <div className="absolute inset-0">
                     <Image
                       key={activeFeaturedVideo.id}
                       src={featuredThumbnail}
