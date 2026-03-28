@@ -107,8 +107,6 @@ export default function Home() {
   })
   const [playingVideo, setPlayingVideo] = React.useState<{ videoId: string; title: string } | null>(null)
   const [hoveredId, setHoveredId] = React.useState<number | null>(null)
-  const [timeSinceUpload, setTimeSinceUpload] = React.useState<string>("")
-  const [timeUnits, setTimeUnits] = React.useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
   const [moreVideos, setMoreVideos] = React.useState<YouTubeVideo[] | null>(null)
   const [randomizedMoreVideos, setRandomizedMoreVideos] = React.useState<YouTubeVideo[] | null>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
@@ -466,29 +464,6 @@ export default function Home() {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [isSearchExpanded])
 
-  React.useEffect(() => {
-    if (!activeFeaturedVideo?.publishedAt) return
-
-    const updateTimer = () => {
-      const uploadDate = new Date(activeFeaturedVideo.publishedAt)
-      const now = new Date()
-      const diffMs = now.getTime() - uploadDate.getTime()
-
-      const seconds = Math.floor(diffMs / 1000) % 60
-      const minutes = Math.floor(diffMs / (1000 * 60)) % 60
-      const hours = Math.floor(diffMs / (1000 * 60 * 60)) % 24
-      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-      setTimeUnits({ days, hours, minutes, seconds })
-      setTimeSinceUpload(`${days} DAYS ${hours} HOURS ${minutes} MINUTES ${seconds} SECONDS`)
-    }
-
-    updateTimer()
-    const interval = setInterval(updateTimer, 1000)
-
-    return () => clearInterval(interval)
-  }, [activeFeaturedVideo?.publishedAt])
-
   // Featured video is a single slot; no carousel rotation.
 
   React.useEffect(() => {
@@ -599,6 +574,8 @@ ${fontFaceCss}
 
 .featured-layer {
   will-change: transform, opacity;
+  /* Crop out top-of-thumbnail stamp text (e.g. month/year) */
+  object-position: center 65%;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -653,20 +630,7 @@ ${fontFaceCss}
             </nav>
           </div>
 
-          {activeFeaturedVideo && (
-            <div className="hidden lg:flex items-center">
-              <div
-                className="text-white uppercase font-black tracking-[0.08em] text-lg lg:text-xl"
-                style={{
-                  textShadow:
-                    "0 6px 10px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.35)",
-                }}
-                aria-label="March 2026"
-              >
-                March 2026
-              </div>
-            </div>
-          )}
+          {activeFeaturedVideo && <div className="hidden lg:flex items-center" />}
 
 <div className="flex items-center gap-2 min-w-0">
             <Button
